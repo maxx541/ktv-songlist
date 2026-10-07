@@ -567,7 +567,8 @@ function showLinkResult(box, r) {
   const item = () => ({ title: titleInput.value.trim(), url: r.url, videoId: r.videoId || null, channel: r.channel || '', thumb: r.thumb || '' });
   const updateChips = () => chips.replaceChildren(...statusChips(itemStatus(item())));
   titleInput.addEventListener('input', updateChips);
-  box.replaceChildren(
+  // 注意：replaceChildren 收到 null 會把它變成文字「null」，所以用 filter(Boolean) 把空的拿掉
+  box.replaceChildren(...[
     h('div', { class: 'link-card' },
       thumb({ url: r.url, videoId: r.videoId, thumb: r.thumb }, 'sm'),
       h('div', { class: 'meta stack' },
@@ -588,7 +589,7 @@ function showLinkResult(box, r) {
         saveItems([item()]);
       } }, add.replace ? '用這首更換' : '加入'),
     ),
-  );
+  ].filter(Boolean));
   updateChips();
   if (!r.title) titleInput.focus();
 }

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>MakoSing 示範影片</title>
+<link rel="stylesheet" href="stage.css">
+</head>
+<body>
+<div id="stage">
+  <div id="bg"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+
+  <div id="head"><span id="step-no"></span><span id="step-title"></span></div>
+  <div id="cap"></div>
+
+  <div id="cam">
+    <div id="phone">
+      <div class="notch"></div>
+      <div id="screen"><iframe id="site" src="site/index.html" scrolling="no"></iframe></div>
+    </div>
+  </div>
+
+  <!-- 示意用疊層（在攝影機外面，位置與大小由 stage.js 依畫面算出） -->
+  <div id="shade" class="ov"></div>
+  <div id="flash" class="ov"></div>
+  <div class="ov ring" id="ring0"></div><div class="ov ring" id="ring1"></div><div class="ov ring" id="ring2"></div>
+  <div id="menu" class="ov"></div>
+  <div id="badge" class="ov"></div>
+  <div id="confirm" class="ov"><b>這些歌已經有人點了：</b>・IF*Else（純K 投屏版）（小華 已點）<br>還是要加入嗎？<div class="btns"><span>取消</span><span class="go" id="confirm-go">加入</span></div></div>
+  <div id="ripple" class="ov"></div>
+  <div id="touch" class="ov"></div>
+
+  <div id="intro" class="card">
+    <img class="tachie" id="t-intro" src="site/img/tachie/04.webp" alt="" style="height:1000px">
+    <img class="logo" src="site/img/logo.png" alt="">
+    <div class="word" id="word"></div>
+    <div class="sub s1">KTV 點歌整理</div>
+    <div class="sub s2">去唱之前，先看看有沒有人點過</div>
+  </div>
+
+  <div id="outro" class="card">
+    <img class="tachie" id="t-out-l" src="site/img/tachie/03.webp" alt="" style="left:-30px;height:880px">
+    <img class="tachie" id="t-out-r" src="site/img/tachie/02.webp" alt="" style="right:-20px;height:880px">
+    <img class="logo" src="site/img/logo.png" alt="">
+    <div class="word" id="word2"></div>
+    <div class="sub s1">登入、建立活動、貼連結，歌單一目了然</div>
+    <div class="sub s2">maxx541.github.io/ktv-songlist</div>
+  </div>
+
+  <div id="fade"></div>
+</div>
+<script src="stage.js"></script>
+</body>
+</html>

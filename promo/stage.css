@@ -1,0 +1,61 @@
+/* 示範影片的舞台：1080×1920（直式短影音）。所有動態都由 stage.js 依「時間 t」直接算出來，不用 CSS 動畫。 */
+:root { --accent: #8a4fd6; --ink: #221d2b; --muted: #6c6479; --soft: #efe5fb; }
+* { box-sizing: border-box; margin: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: #fff; font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif; color: var(--ink); }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: linear-gradient(180deg, #ffffff 0%, #f7f2fd 60%, #efe6fb 100%); }
+
+/* 背景：幾顆很淡的漸層圓，只做慢速漂移 */
+#bg i { position: absolute; border-radius: 50%; }
+#bg .b1 { width: 900px; height: 900px; left: -300px; top: -200px; background: radial-gradient(circle, rgba(183,124,242,.22), rgba(183,124,242,0) 68%); }
+#bg .b2 { width: 1000px; height: 1000px; right: -420px; top: 700px; background: radial-gradient(circle, rgba(120,170,255,.20), rgba(120,170,255,0) 68%); }
+#bg .b3 { width: 800px; height: 800px; left: -260px; bottom: -260px; background: radial-gradient(circle, rgba(255,160,200,.20), rgba(255,160,200,0) 68%); }
+
+/* 標題區（步驟編號 + 標題）與底部字幕 */
+#head { position: absolute; left: 0; right: 0; top: 74px; height: 110px; display: flex; align-items: center; justify-content: center; gap: 26px; }
+#step-no { width: 92px; height: 92px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 54px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 12px 30px rgba(138,79,214,.35); }
+#step-title { font-size: 76px; font-weight: 800; letter-spacing: 2px; }
+#cap { position: absolute; left: 60px; right: 60px; top: 1796px; text-align: center; font-size: 46px; font-weight: 600; color: var(--muted); line-height: 1.4; }
+
+/* 手機框（含攝影機縮放） */
+#cam { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; transform-origin: 0 0; }
+#phone { position: absolute; left: 140px; top: 215px; width: 800px; height: 1560px; border-radius: 96px; background: #1d1824; padding: 14px; box-shadow: 0 50px 110px rgba(60,30,110,.28), 0 0 0 3px #3a3346 inset; will-change: transform; }
+#screen { position: relative; width: 772px; height: 1532px; border-radius: 84px; overflow: hidden; background: #fff; }
+#site { width: 390px; height: 774px; border: 0; transform: scale(1.97949); transform-origin: 0 0; background: #fff; }
+#phone .notch { position: absolute; left: 50%; top: 26px; width: 150px; height: 38px; margin-left: -75px; border-radius: 20px; background: #0e0b12; z-index: 3; }
+
+/* 疊在畫面上的示意元素（以「網站像素」為單位，再由 stage.js 縮放與定位） */
+.ov { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; display: none; }
+#touch { width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(138,79,214,.28); border: 3px solid rgba(138,79,214,.9); }
+#ripple { width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; border: 3px solid rgba(138,79,214,.85); }
+.ring { border: 3px solid #e2483d; border-radius: 12px; box-shadow: 0 0 0 4px rgba(226,72,61,.18); }
+#menu { min-width: 200px; padding: 6px; background: #fff; border: 1px solid #e2d9ee; border-radius: 14px; box-shadow: 0 14px 34px rgba(60,30,110,.22); font-size: 16px; color: var(--ink); }
+#menu div { height: 44px; padding: 0 14px; display: flex; align-items: center; border-radius: 9px; font-weight: 500; }
+#menu div.on { background: var(--soft); color: var(--accent); font-weight: 700; }
+#confirm { width: 310px; padding: 22px 20px 18px; background: #fff; border-radius: 18px; box-shadow: 0 24px 60px rgba(30,15,60,.35); font-size: 15px; line-height: 1.55; color: var(--ink); }
+#confirm b { display: block; font-size: 17px; margin-bottom: 8px; }
+#confirm .btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+#confirm .btns span { padding: 8px 18px; border-radius: 999px; font-weight: 700; background: var(--soft); color: var(--accent); }
+#confirm .btns span.go { background: var(--accent); color: #fff; }
+#confirm .btns span.press { transform: scale(.92); filter: brightness(.9); }
+#shade { position: absolute; left: 0; top: 0; background: rgba(20,12,36,.38); border-radius: 0; display: none; pointer-events: none; }
+#flash { border-radius: 10px; background: rgba(138,79,214,.22); }
+#badge { padding: 8px 16px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; white-space: nowrap; box-shadow: 0 8px 22px rgba(138,79,214,.4); }
+
+/* 片頭／片尾 */
+.card { position: absolute; inset: 0; display: none; }
+.logo { position: absolute; left: 50%; width: 250px; height: 250px; margin-left: -125px; object-fit: contain; }
+.word { position: absolute; left: 0; right: 0; text-align: center; font-weight: 800; letter-spacing: 3px; }
+.word span { display: inline-block; }
+.sub { position: absolute; left: 0; right: 0; text-align: center; color: var(--muted); font-weight: 600; }
+.tachie { position: absolute; bottom: 0; height: 1180px; width: auto; }
+#intro .logo { top: 250px; }
+#intro .word { top: 530px; font-size: 168px; line-height: 1.1; }
+#intro .sub.s1 { top: 750px; font-size: 62px; color: var(--accent); }
+#intro .sub.s2 { top: 860px; font-size: 48px; }
+#outro .logo { top: 250px; width: 210px; height: 210px; margin-left: -105px; }
+#outro .word { top: 490px; font-size: 150px; line-height: 1.1; }
+#outro .sub.s1 { top: 690px; font-size: 52px; color: var(--ink); }
+#outro .sub.s2 { top: 810px; font-size: 56px; color: var(--accent); }
+#outro .sub.s3 { top: 1030px; font-size: 44px; }
+#outro .pill { position: absolute; left: 50%; top: 870px; transform: translateX(-50%); }
+#fade { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }

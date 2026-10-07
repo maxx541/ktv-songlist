@@ -4,3 +4,5 @@ node_modules/
 立繪/
 /logo.png
 .claude/
+promo/build/
+promo/out/
