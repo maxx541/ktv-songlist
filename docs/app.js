@@ -63,7 +63,7 @@ function hostOf(url) {
 }
 
 function thumb(song, cls = '') {
-  const src = song.videoId ? thumbnailFor(song.videoId) : null;
+  const src = song.videoId ? thumbnailFor(song.videoId, song.thumb) : null;
   const label = /youtube\.com\/results/.test(song.url || '') ? 'YouTube 搜尋' : (hostOf(song.url) || '連結');
   const ph = () => h('span', { class: 'ph' }, h('span', { class: 'ph-icon' }, icon('note')), h('span', { class: 'ph-host' }, label));
   const a = h('a', { class: `thumb ${cls}`, href: safeHref(song.url), target: '_blank', rel: 'noopener noreferrer', tabindex: '-1', 'aria-hidden': 'true' });
@@ -465,7 +465,7 @@ async function saveItems(items) {
   try {
     if (add.replace) {
       const it = items[0];
-      await store.updateSong(add.replace, { title: it.title, url: it.url || '', channel: it.channel || '' });
+      await store.updateSong(add.replace, { title: it.title, url: it.url || '', channel: it.channel || '', thumb: it.thumb || '' });
       toast('已更換');
     } else {
       const n = await store.addSongs(items, mySongs());
@@ -500,12 +500,12 @@ function renderLinkSource(body) {
 function showLinkResult(box, r) {
   const titleInput = h('input', { value: r.title || '', maxlength: 200, required: true, placeholder: '輸入歌名', 'aria-label': '歌名' });
   const chips = h('span', { class: 'chips' });
-  const item = () => ({ title: titleInput.value.trim(), url: r.url, videoId: r.videoId || null, channel: r.channel || '' });
+  const item = () => ({ title: titleInput.value.trim(), url: r.url, videoId: r.videoId || null, channel: r.channel || '', thumb: r.thumb || '' });
   const updateChips = () => chips.replaceChildren(...statusChips(itemStatus(item())));
   titleInput.addEventListener('input', updateChips);
   box.replaceChildren(
     h('div', { class: 'link-card' },
-      thumb({ url: r.url, videoId: r.videoId }, 'sm'),
+      thumb({ url: r.url, videoId: r.videoId, thumb: r.thumb }, 'sm'),
       h('div', { class: 'meta stack' },
         h('label', { class: 'field' }, h('span', {}, '歌名'), titleInput),
         r.channel ? h('span', { class: 'sub' }, r.channel) : null,
@@ -513,7 +513,7 @@ function showLinkResult(box, r) {
         chips,
       ),
     ),
-    embedUrl(r.videoId)
+    embedUrl(r.videoId) && !r.title // 中繼有查到歌名就不需要播放器；沒查到才顯示讓人對照歌名
       ? h('div', { class: 'embed-player' },
         h('iframe', { src: embedUrl(r.videoId), title: 'bilibili 播放器', loading: 'lazy', scrolling: 'no', frameborder: 'no', allowfullscreen: 'true', referrerpolicy: 'no-referrer-when-downgrade', allow: 'fullscreen' }))
       : null,

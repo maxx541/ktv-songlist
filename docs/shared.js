@@ -89,9 +89,17 @@ export function extractPlaylistId(input) {
   return list && /^[\w-]{2,64}$/.test(list) ? list : null;
 }
 
-/** 縮圖網址；bilibili 沒有可以直接用的縮圖網址，回傳 null（畫面會顯示預設圖示） */
-export function thumbnailFor(videoId) {
-  return videoId && !isBilibiliId(videoId) ? `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg` : null;
+/** bilibili 封面網址要是 hdslb.com 的 https 圖片（資料庫規則也用同樣條件） */
+export const isBilibiliCover = (u) => typeof u === 'string' && u.length <= 500 && /^https:\/\/([a-z0-9-]+\.)*hdslb\.com\/.+/.test(u);
+
+/**
+ * 縮圖網址。YouTube 由 ID 組出來；bilibili 的封面網址無法由 BV 號推算，要用 thumb（查詢時存下來的），
+ * 沒有就回傳 null（畫面顯示預設圖示）。
+ */
+export function thumbnailFor(videoId, thumb) {
+  if (!videoId) return null;
+  if (isBilibiliId(videoId)) return isBilibiliCover(thumb) ? `${thumb}@320w_180h.jpg` : null;
+  return `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
 }
 
 export function youtubeSearchUrl(title) {

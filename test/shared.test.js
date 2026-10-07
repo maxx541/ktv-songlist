@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractVideoId, extractPlaylistId, normalizeTitle, findDuplicates, cleanNickname, isVideoId, videoUrl, thumbnailFor, normalizePasted, embedUrl } from '../docs/shared.js';
+import { extractVideoId, extractPlaylistId, normalizeTitle, findDuplicates, cleanNickname, isVideoId, videoUrl, thumbnailFor, normalizePasted, embedUrl, isBilibiliCover } from '../docs/shared.js';
 
 test('extractVideoId 支援各種 YouTube 網址', () => {
   const id = 'DYptgVvkVLQ';
@@ -40,6 +40,11 @@ test('isVideoId、videoUrl、thumbnailFor 同時處理 YouTube 與 bilibili', ()
   assert.equal(videoUrl('BV1GJ411x7h7'), 'https://www.bilibili.com/video/BV1GJ411x7h7');
   assert.equal(videoUrl('DYptgVvkVLQ'), 'https://www.youtube.com/watch?v=DYptgVvkVLQ');
   assert.equal(thumbnailFor('BV1GJ411x7h7'), null);
+  const cover = 'https://i2.hdslb.com/bfs/archive/abc123.jpg';
+  assert.equal(thumbnailFor('BV1GJ411x7h7', cover), `${cover}@320w_180h.jpg`);
+  assert.equal(thumbnailFor('BV1GJ411x7h7', 'https://evil.example/a.jpg'), null); // 只收 hdslb.com
+  assert.equal(thumbnailFor('BV1GJ411x7h7', 'http://i2.hdslb.com/a.jpg'), null);   // 只收 https
+  assert.ok(isBilibiliCover(cover) && !isBilibiliCover('https://hdslb.com.evil.example/a.jpg') && !isBilibiliCover(''));
   assert.match(thumbnailFor('DYptgVvkVLQ'), /ytimg\.com/);
 });
 

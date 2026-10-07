@@ -1,6 +1,6 @@
 // YouTube：授權（Google Identity Services 權杖用戶端）、讀播放清單、解析貼上的網址
 // 全部在瀏覽器裡直接呼叫 Google API，不需要自己的伺服器。
-import { googleClientId, youtubeApiKey } from './config.js';
+import { googleClientId, youtubeApiKey, biliRelayUrl } from './config.js';
 import { extractVideoId, extractPlaylistId, isBilibiliId, videoUrl, normalizePasted } from './shared.js';
 
 const YT_SCOPE = 'https://www.googleapis.com/auth/youtube.readonly';
@@ -181,6 +181,19 @@ async function videoInfo(videoId) {
   }
 }
 
+/** 向自己的中繼服務查 bilibili 影片的歌名、上傳者、封面；服務沒開或查不到回傳 null */
+async function biliInfo(bvid) {
+  if (!biliRelayUrl) return null;
+  try {
+    const res = await fetch(`${biliRelayUrl}/?bvid=${encodeURIComponent(bvid)}`, { signal: AbortSignal.timeout(6000) });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return body?.title ? { title: String(body.title), channel: String(body.channel || ''), thumb: String(body.pic || '') } : null;
+  } catch {
+    return null;
+  }
+}
+
 /** 解析貼上的網址：YouTube 影片、YouTube 播放清單，或其他網站連結 */
 export async function resolveUrl(raw) {
   let url;
@@ -193,11 +206,13 @@ export async function resolveUrl(raw) {
   const videoId = extractVideoId(url.href);
   const playlistId = extractPlaylistId(url.href);
   if (videoId && isBilibiliId(videoId)) {
-    // bilibili 的 API 不允許從其他網站呼叫（CORS），抓不到標題，只能認得是哪支影片
+    // 瀏覽器不能直接問 bilibili（CORS），所以問自己的中繼服務；沒開就退回手動輸入
     const p = Number(url.searchParams.get('p'));
+    const info = await biliInfo(videoId);
     return {
-      type: 'video', videoId, url: videoUrl(videoId) + (p > 1 ? `?p=${p}` : ''), title: '', channel: '',
-      warning: 'bilibili 抓不到影片標題，請自己輸入歌名',
+      type: 'video', videoId, url: videoUrl(videoId) + (p > 1 ? `?p=${p}` : ''),
+      title: info?.title || '', channel: info?.channel || '', thumb: info?.thumb || '',
+      ...(info ? {} : { warning: '抓不到影片標題，請自己輸入歌名' }),
     };
   }
   if (videoId) {

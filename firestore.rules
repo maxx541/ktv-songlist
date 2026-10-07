@@ -48,12 +48,14 @@ service cloud.firestore {
     match /songs/{songId} {
       function validSong() {
         let d = request.resource.data;
-        return d.keys().hasOnly(['userId', 'title', 'url', 'videoId', 'channel', 'order', 'createdAt', 'updatedAt'])
+        return d.keys().hasOnly(['userId', 'title', 'url', 'videoId', 'channel', 'thumb', 'order', 'createdAt', 'updatedAt'])
           && d.userId == request.auth.uid
           && isStr(d.title, 1, 200)
           && isStr(d.url, 8, 1000) && d.url.matches('^https?://.*')
           && (d.videoId == null || (d.videoId is string && (d.videoId.matches('^[A-Za-z0-9_-]{11}$') || d.videoId.matches('^BV1[A-Za-z0-9]{9}$'))))
           && isStr(d.channel, 0, 100)
+          // bilibili 封面（選填）：只收 hdslb.com 的 https 圖片
+          && (!('thumb' in d) || d.thumb == '' || (isStr(d.thumb, 10, 500) && d.thumb.matches('^https://([a-z0-9-]+\\.)*hdslb\\.com/.+')))
           && d.order is number;
       }
       allow read: if signedIn();

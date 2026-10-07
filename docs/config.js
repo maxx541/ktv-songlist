@@ -13,6 +13,10 @@ export const firebaseConfig = {
 // Firebase 主控台 → Authentication → 登入方式 → Google → 「網路 SDK 設定」裡的「網路用戶端 ID」
 export const googleClientId = '348753630362-gopbritfhj0slf66jjn5mv03shutmskc.apps.googleusercontent.com';
 
+// 選填：bilibili 中繼服務網址（server/bili-relay.mjs 加 Tailscale Funnel 的對外網址，結尾不要加 /）。
+// 沒填、或中繼電腦沒開時，bilibili 會改成顯示播放器，歌名自己輸入。
+export const biliRelayUrl = '';
+
 // 選填：YouTube Data API 金鑰（限制只能從你的網址使用）。
 // 有填的話，沒連結 YouTube 的人也能用「播放清單網址」匯入公開清單。
 export const youtubeApiKey = '';
