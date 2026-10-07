@@ -59,3 +59,23 @@ html, body { width: 1080px; height: 1920px; overflow: hidden; background: #fff; 
 #outro .sub.s3 { top: 1030px; font-size: 44px; }
 #outro .pill { position: absolute; left: 50%; top: 870px; transform: translateX(-50%); }
 #fade { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+
+/* 「點歌曲跳轉到原影片」：模擬瀏覽器打開影片頁面，蓋在手機螢幕上 */
+#jump { position: absolute; left: 154px; top: 229px; width: 772px; height: 1532px; border-radius: 84px; overflow: hidden; background: #fff; display: none; }
+#jump .jbar { position: absolute; left: 0; right: 0; top: 0; height: 150px; padding: 78px 40px 0; display: flex; align-items: center; gap: 18px; background: #f4f1f8; border-bottom: 2px solid #e2d9ee; }
+#jump .jdot { width: 26px; height: 26px; border-radius: 50%; background: #8a4fd6; flex: none; }
+#jump #jurl { flex: 1; min-width: 0; font-size: 30px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+#jump #jsite { font-size: 26px; font-weight: 800; color: #fff; background: #e2483d; padding: 4px 16px; border-radius: 999px; }
+#jump[data-site="bilibili"] #jsite { background: #ff6699; }
+#jump .jplayer { position: absolute; left: 0; right: 0; top: 150px; height: 434px; background: #0d0b12; overflow: hidden; }
+#jump .jplayer img { width: 100%; height: 100%; object-fit: cover; opacity: .92; }
+#jump #jplay { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.92); box-shadow: 0 10px 30px rgba(0,0,0,.35); transform: translate(-50%, -50%); }
+#jump #jplay i { position: absolute; left: 48px; top: 36px; border-style: solid; border-width: 24px 0 24px 40px; border-color: transparent transparent transparent #221d2b; }
+#jump .jprogwrap { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; background: rgba(255,255,255,.3); }
+#jump #jprog { height: 100%; width: 0; background: #e2483d; }
+#jump[data-site="bilibili"] #jprog { background: #ff6699; }
+#jump .jtitle { position: absolute; left: 40px; right: 40px; top: 620px; font-size: 40px; font-weight: 800; line-height: 1.35; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+#jump .jchan { position: absolute; left: 40px; right: 40px; top: 790px; font-size: 30px; color: var(--muted); font-weight: 600; }
+#jump .jskel { position: absolute; left: 40px; right: 40px; top: 880px; display: grid; gap: 22px; }
+#jump .jskel i { display: block; height: 26px; border-radius: 13px; background: #efeaf5; }
+#jump #jnote { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); padding: 16px 34px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 34px; font-weight: 800; white-space: nowrap; box-shadow: 0 12px 30px rgba(138,79,214,.4); opacity: 0; }

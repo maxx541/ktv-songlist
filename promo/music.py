@@ -1,7 +1,7 @@
 """MakoSing 示範影片的原創配樂與音效（純 numpy 合成，不用任何樣本）。
 讀 promo/out/cues.json（stage.js 產生的音效提示），輸出 promo/out/music.wav（立體聲 44.1kHz）。
-曲風：輕快的 city-pop／lo-fi，C 大調，BPM 112。段落跟影片對齊：
-  0–4.4 片頭（只有鋪底與亮晶晶的琶音）→ 4.4 起節奏進來 → 22.4 起加入主旋律琶音 → 41.8 起更飽滿 → 53.6 起收尾、長音結束。
+曲風：快節奏的 city-pop／future-pop，C 大調，BPM 140。段落跟影片對齊（時間由 cues.json 的 sections 決定）：
+  片頭（鋪底與亮晶晶的鈴聲）→ 節奏進來 → 加入十六分音符琶音 → 最後一段更飽滿 → 收尾、長音結束。
 用法：python promo/music.py
 """
 import json
@@ -12,7 +12,7 @@ import soundfile as sf
 
 SR = 44100
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out')
-BPM = 112
+BPM = 140
 BEAT = 60 / BPM
 BAR = BEAT * 4
 rng = np.random.default_rng(7)
@@ -145,6 +145,11 @@ def sweep_noise(dur, f0, f1, width=0.7):
 music = np.zeros((N, 2))
 send = np.zeros((N, 2))   # 進殘響的訊號
 
+SEC = cues['sections']                      # 影片各段落的開始時間（stage.js 提供）
+GRID0 = max(0.0, SEC['groove'] - 2 * BAR)   # 節拍格從這裡開始，讓「節奏進來」剛好落在小節線上（前面兩小節是片頭）
+bar_of = lambda t: max(0, int(round((t - GRID0) / BAR)))
+B_GROOVE, B_ARP, B_FULL, B_OUTRO = bar_of(SEC['groove']), bar_of(SEC['arp']), bar_of(SEC['full']), bar_of(SEC['outro'] + 0.5)
+
 CH = {  # 和弦：(根音, 和弦音們) MIDI
     'F': (41, [60, 64, 67, 69]),     # Fmaj6 色彩
     'G': (43, [59, 62, 67, 71]),
@@ -153,74 +158,82 @@ CH = {  # 和弦：(根音, 和弦音們) MIDI
     'C': (48, [60, 64, 67, 71]),     # Cmaj7
 }
 PROG = ['F', 'G', 'E', 'A']
-nbars = int(TOTAL / BAR) + 1
-bars = []
-for b in range(nbars):
-    bars.append(PROG[b % 4])
-# 收尾：最後幾小節走 F G A C
-for k, ch in zip(range(nbars - 5, nbars - 1), ['F', 'G', 'A', 'C']):
+nbars = int((TOTAL - GRID0) / BAR) + 1
+bars = [PROG[b % 4] for b in range(nbars)]
+for k, ch in zip(range(nbars - 5, nbars - 1), ['F', 'G', 'A', 'C']):   # 收尾走 F G A C，最後一個 C 長音
     bars[k] = ch
-LAST_BAR_START = (nbars - 5 + 3) * BAR      # 最後那個 C 長音開始的時間
+LAST_BAR = nbars - 2
 
-
-def level(t):
-    """依段落決定各層音量：回傳 dict。"""
-    L = {'pad': 1.0, 'epiano': 0, 'bass': 0, 'drums': 0, 'hat': 0, 'arp': 0, 'sparkle': 1.0}
-    if t >= 4.4:
-        L.update(epiano=1, bass=1, drums=1, hat=1)
-    if t >= 22.4:
-        L.update(arp=0.7)
-    if t >= 41.8:
-        L.update(arp=1.0)
-    if t >= 53.6:
-        L.update(drums=0, hat=0, arp=0.4)
-    return L
+# 每個段落開始前一小節放一個上升的噪音（riser）＋ 小鼓滾奏，帶出能量
+def riser(t_end, dur=BAR, gain=0.7):
+    x = sweep_noise(dur, 400, 7000, 0.9)
+    env = np.linspace(0, 1, len(x)) ** 2
+    put(music, t_end - dur, x * env * gain)
 
 
 for b, ch in enumerate(bars):
-    t0 = b * BAR
+    t0 = GRID0 + b * BAR
+    if t0 >= TOTAL:
+        break
     root, tones = CH[ch]
-    L = level(t0 + 0.01)
-    final = t0 >= LAST_BAR_START - 1e-6
-    # 鋪底（每小節一個長音，intro 就有）
+    intro = b < B_GROOVE
+    outro = b >= B_OUTRO
+    last = b >= LAST_BAR
+    arp_gain = 0.0 if b < B_ARP else (0.65 if b < B_FULL else 1.0)
+    if outro and not last:
+        arp_gain = 0.45
+    # 鋪底
     for p in tones:
-        put(send, t0, pad(midi(p - 12), BAR * (3.2 if final else 1.05), 1.0 * L['pad']), pan=rng.uniform(-0.5, 0.5))
-    if final:
+        put(send, t0, pad(midi(p - 12), BAR * (3.2 if last else 1.05), 1.0), pan=rng.uniform(-0.5, 0.5))
+    if last:
         for k, p in enumerate(tones):
-            put(send, t0 + k * 0.05, epiano(midi(p), 3.5, 0.7), pan=(k - 1.5) * 0.3)
-        put(music, t0, bass(midi(root), 3.0, 0.9))
+            put(send, t0 + k * 0.04, epiano(midi(p), 3.0, 0.7), pan=(k - 1.5) * 0.3)
+        put(music, t0, bass(midi(root), 2.5, 0.9))
+        put(music, t0, kick(1.0))
         continue
-    if L['epiano']:
-        # 切分和弦刷奏（八分音符，反拍有重音）
-        for step, accent in ((0, 1.0), (3, 0.8), (4, 0.6), (6, 0.9)):
-            st = t0 + step * BEAT / 2
-            for k, p in enumerate(tones):
-                put(send, st + k * 0.012, epiano(midi(p), BEAT * 0.9, 0.55 * accent), pan=(k - 1.5) * 0.25)
-    if L['bass']:
-        for step, note, dur in ((0, root, 0.9), (3, root, 0.4), (4, root + 7, 0.5), (6, root + 12, 0.4)):
-            put(music, t0 + step * BEAT / 2, bass(midi(note), BEAT * dur, 0.9))
-    if L['drums']:
+    if intro:
+        continue
+    # 底鼓：四四拍每拍一下；2、4 拍加拍手／小鼓；16 分音符的 hi-hat
+    if not outro:
         for beat in range(4):
-            tb = t0 + beat * BEAT
-            if beat in (0, 2):
-                put(music, tb, kick(1.0), gain=1.0)
+            put(music, t0 + beat * BEAT, kick(1.0 if beat in (0, 2) else 0.85))
             if beat in (1, 3):
-                put(music, tb, snare(0.8))
-        put(music, t0 + 2.5 * BEAT, kick(0.7))
-    if L['hat']:
-        for s8 in range(8):
-            put(music, t0 + s8 * BEAT / 2, hat(0.7 if s8 % 2 == 0 else 0.45, open_=(s8 == 7)), pan=0.25)
-    if L['arp']:
-        # 十六分音符琶音（高八度），帶一點回音感由殘響處理
-        order = [0, 2, 1, 3, 2, 1, 3, 2]
-        for s16 in range(8):
+                put(music, t0 + beat * BEAT, snare(0.9))
+        for s16 in range(16):
+            accent = 1.0 if s16 % 4 == 2 else (0.6 if s16 % 2 == 0 else 0.35)
+            put(music, t0 + s16 * BEAT / 4, hat(accent, open_=(s16 % 8 == 6)), pan=0.25)
+        if b >= B_FULL:                                    # 最後一段更滿：加一層反拍小鼓與 16 分音符底鼓點綴
+            put(music, t0 + 3.5 * BEAT, snare(0.55))
+            put(music, t0 + 2.75 * BEAT, kick(0.6))
+    else:
+        put(music, t0, kick(0.9)); put(music, t0 + 2 * BEAT, kick(0.7))
+    # 貝斯：八分音符推進（根音—八度交錯）
+    for s8, note in enumerate([root, root, root + 12, root, root, root + 7, root + 12, root + 7]):
+        put(music, t0 + s8 * BEAT / 2, bass(midi(note), BEAT * 0.42, 0.85))
+    # 電鋼琴：反拍八分音符短刷奏
+    for s8 in (1, 3, 5, 7):
+        st = t0 + s8 * BEAT / 2
+        for k, p in enumerate(tones):
+            put(send, st + k * 0.008, epiano(midi(p), BEAT * 0.4, 0.5 + 0.1 * (s8 == 7)), pan=(k - 1.5) * 0.25)
+    # 十六分音符琶音（高八度），左右交替
+    if arp_gain > 0:
+        order = [0, 1, 2, 3, 2, 1, 3, 2, 0, 1, 2, 3, 1, 2, 3, 2]
+        for s16 in range(16):
             p = tones[order[s16]] + 12
-            put(send, t0 + s16 * BEAT / 2 + BEAT / 4 * (s16 % 2), pluck(midi(p), 0.3, 0.8 * L['arp']), pan=0.35 * (1 if s16 % 2 else -1))
+            put(send, t0 + s16 * BEAT / 4, pluck(midi(p), 0.22, 0.75 * arp_gain), pan=0.4 * (1 if s16 % 2 else -1))
 
-# 片頭的亮晶晶（0–4.4）：五聲音階往上
+# 段落轉換：上升噪音 + 前一小節最後一拍的小鼓滾奏
+for sec_bar in (B_GROOVE, B_ARP, B_FULL):
+    t_sec = GRID0 + sec_bar * BAR
+    riser(t_sec, BAR * (2 if sec_bar == B_GROOVE else 1))
+    if sec_bar != B_GROOVE:
+        for k in range(8):
+            put(music, t_sec - BEAT + k * BEAT / 8, snare(0.35 + 0.08 * k))
+    put(music, t_sec, kick(1.1))
+
+# 片頭的亮晶晶：五聲音階往上
 for k, p in enumerate([76, 79, 83, 84, 88, 91]):
-    put(send, 0.9 + k * 0.28, bell(midi(p), 1.2, 0.8), pan=(-1) ** k * 0.4)
-
+    put(send, 0.5 + k * 0.2, bell(midi(p), 1.2, 0.8), pan=(-1) ** k * 0.4)
 # ---------- 殘響 ----------
 ir_n = int(1.6 * SR)
 ir = np.stack([rng.standard_normal(ir_n) * np.exp(-np.arange(ir_n) / SR / 0.45) for _ in range(2)], axis=1)

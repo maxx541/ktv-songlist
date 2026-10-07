@@ -158,7 +158,7 @@ def main():
         total = page.evaluate('window.TOTAL')
         if mode == 'cues':
             cues = page.evaluate('window.CUES')
-            json.dump({'total': total, 'cues': cues}, open(os.path.join(OUT, 'cues.json'), 'w'), ensure_ascii=False, indent=1)
+            json.dump({'total': total, 'cues': cues, 'sections': page.evaluate('window.SECTIONS')}, open(os.path.join(OUT, 'cues.json'), 'w'), ensure_ascii=False, indent=1)
             print(f'{len(cues)} 個音效提示，總長 {total}s')
         elif mode == 'frames':
             targets = sorted(float(x) for x in sys.argv[2:])
