@@ -1,4 +1,4 @@
-/* KTV 點歌整理 — 固定暗色主題 */
+/* MakoSing — 固定暗色主題 */
 :root {
   --bg: #121016;
   --surface: #1c1922;
@@ -57,7 +57,8 @@ button, input, textarea { font: inherit; color: inherit; }
 
 /* 頂欄 */
 .topbar { display: flex; align-items: center; gap: 12px; max-width: 1100px; width: 100%; margin: 0 auto; padding: 14px 16px; }
-.topbar h1 { font-size: 1.2rem; white-space: nowrap; }
+.topbar h1 { font-size: 1.2rem; white-space: nowrap; display: flex; align-items: center; gap: 10px; }
+.brand-logo { width: 34px; height: 34px; object-fit: contain; flex: none; }
 .userbox { margin-left: auto; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .me-btn {
   display: flex; align-items: center; gap: 8px; min-width: 0;
@@ -109,6 +110,23 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 
 /* 登入 */
 .login-wrap { display: grid; place-items: start center; padding: 24px 0 40px; }
+/* 登入頁：左邊登入卡片、右邊隨機一張立繪（手機改成立繪在上、卡片在下）。立繪不加動畫與濾鏡 */
+/* 舞台是白底的淺色區塊：立繪的白底、髮絲間的白色殘留都不會突兀。區塊內的顏色變數改成淺色版 */
+.login-stage {
+  --surface: #faf7fe; --surface-2: #f0e9f9; --text: #221d2b; --muted: #6c6479; --border: #e2d9ee;
+  --accent: #8a4fd6; --accent-ink: #fff; --accent-soft: #efe5fb; --danger: #c62828;
+  box-sizing: border-box; color-scheme: light; color: var(--text); background: #fff; border-radius: 20px; padding: 28px 40px;
+  display: flex; align-items: center; justify-content: center; gap: 40px; width: 100%;
+}
+.login-stage .login { flex: none; }
+.tachie { margin: 0; flex: none; order: 2; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; user-select: none; }
+.tachie img { display: block; width: auto; max-width: 46vw; height: min(80vh, 780px, var(--cap, 9999px)); object-fit: contain; }
+.tachie:not(.ready) { visibility: hidden; }
+@media (max-width: 859px) {
+  .login-stage { flex-direction: column; gap: 8px; padding: 16px; border-radius: 16px; }
+  .tachie { order: 0; }
+  .tachie img { max-width: 70vw; height: min(36vh, 320px, var(--cap, 9999px)); }
+}
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
 .login { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 16px; }
 .login h2 { font-size: 1.4rem; }

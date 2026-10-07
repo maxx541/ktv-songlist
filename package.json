@@ -1,7 +1,7 @@
 {
   "name": "ktv-songlist",
   "version": "1.0.0",
-  "description": "KTV 點歌整理：大家預計要唱的歌一目了然，避免重複（GitHub Pages + Firebase）",
+  "description": "MakoSing，KTV 點歌整理：大家預計要唱的歌一目了然，避免重複（GitHub Pages + Firebase）",
   "type": "module",
   "scripts": {
     "test": "node --test test/shared.test.js"

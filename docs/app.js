@@ -1,5 +1,6 @@
-// KTV 點歌整理 — 前端畫面
+// MakoSing — 前端畫面
 import { extractVideoId, thumbnailFor, findDuplicates, youtubeSearchUrl, embedUrl } from './shared.js';
+import { tachie } from './tachie.js';
 import * as store from './store.js';
 import * as yt from './youtube.js';
 
@@ -104,9 +105,33 @@ const mySongs = () => S.songs.filter((s) => s.userId === S.me?.id).sort((a, b) =
 const otherSongs = () => S.songs.filter((s) => s.userId !== S.me?.id);
 
 // ---------- 畫面 ----------
+let tachieShown = false;
+/** 登入頁每次出現都隨機換一張立繪（不和上一張重複）；載入失敗就整個隱藏，不影響登入 */
+function pickTachie() {
+  const box = $('#tachie');
+  const img = $('#tachie-img');
+  if (!tachie.length) return;
+  let last = -1;
+  try { last = Number(localStorage.getItem('ktv-tachie')); } catch { /* ignore */ }
+  let i;
+  do { i = Math.floor(Math.random() * tachie.length); } while (tachie.length > 1 && i === last);
+  try { localStorage.setItem('ktv-tachie', String(i)); } catch { /* ignore */ }
+  const t = tachie[i];
+  box.classList.remove('ready');
+  box.style.setProperty('--cap', t.maxH ? `${t.maxH}px` : '9999px'); // 原圖很小的，限制顯示高度避免放大變糊
+  img.width = t.w;
+  img.height = t.h;
+  img.onload = () => box.classList.add('ready');
+  img.onerror = () => { box.hidden = true; };
+  box.hidden = false;
+  img.src = t.src;
+}
+
 function showView(id) {
   for (const v of ['unconfigured-view', 'login-view', 'setup-view', 'main-view']) $(`#${v}`).hidden = v !== id;
   $('#loading').hidden = Boolean(id);
+  if (id === 'login-view' && !tachieShown) pickTachie();
+  tachieShown = id === 'login-view';
 }
 
 function render() {

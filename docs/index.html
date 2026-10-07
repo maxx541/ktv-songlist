@@ -3,12 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="KTV 點歌整理：大家預計要唱的歌一目了然，避免點到重複的歌。">
+  <meta name="description" content="MakoSing：KTV 點歌整理，大家預計要唱的歌一目了然，避免點到重複的歌。">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#121016">
   <meta name="robots" content="noindex">
-  <title>KTV 點歌整理</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23b77cf2'/><rect x='12' y='6' width='8' height='13' rx='4' fill='%23121016'/><path d='M9 15a7 7 0 0 0 14 0M16 22v4' stroke='%23121016' stroke-width='2.4' fill='none' stroke-linecap='round'/></svg>">
+  <title>MakoSing</title>
+  <link rel="icon" type="image/png" href="img/favicon.png">
+  <link rel="apple-touch-icon" href="img/logo.png">
   <link rel="stylesheet" href="style.css">
   <script type="module" src="app.js"></script>
 </head>
@@ -18,7 +19,7 @@
   </div>
 
   <header class="topbar">
-    <h1>KTV 點歌整理</h1>
+    <h1><img class="brand-logo" src="img/logo.png" alt="" width="34" height="34"><span>MakoSing</span></h1>
     <div id="userbox" class="userbox"></div>
   </header>
 
@@ -34,6 +35,8 @@
 
     <!-- 登入 -->
     <section id="login-view" class="login-wrap" hidden>
+     <div class="login-stage">
+      <figure class="tachie" id="tachie" aria-hidden="true"><img id="tachie-img" alt="" decoding="async"></figure>
       <div class="panel login">
         <h2>今天想唱什麼？</h2>
         <form id="login-form" class="stack" autocomplete="on">
@@ -51,6 +54,7 @@
         </button>
         <p class="muted small center">暱稱登入僅限這台裝置；Google 登入可跨裝置。</p>
       </div>
+     </div>
     </section>
 
     <!-- 第一次登入：設定暱稱 -->
