@@ -118,6 +118,7 @@ function pickTachie() {
   try { localStorage.setItem('ktv-tachie', String(i)); } catch { /* ignore */ }
   const t = tachie[i];
   box.classList.remove('ready');
+  box.dataset.side = Math.random() < 0.5 ? 'left' : 'right'; // 左下角或右下角
   box.style.setProperty('--cap', t.maxH ? `${t.maxH}px` : '9999px'); // 原圖很小的，限制顯示高度避免放大變糊
   img.width = t.w;
   img.height = t.h;
@@ -132,6 +133,7 @@ function showView(id) {
   $('#loading').hidden = Boolean(id);
   if (id === 'login-view' && !tachieShown) pickTachie();
   tachieShown = id === 'login-view';
+  document.body.classList.toggle('login-mode', tachieShown); // 登入頁整頁白底
 }
 
 function render() {
