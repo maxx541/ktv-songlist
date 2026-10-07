@@ -1,13 +1,14 @@
-# MakoSing 示範影片（直式 1080×1920，約 44 秒）
+# MakoSing 示範影片（直式 1080×1920，約 52 秒）
 
 用網站**真實的程式**（`docs/app.js`）搭配假資料層錄成，不是另外畫的示意圖。
-音樂與音效全部用程式合成（`music.py`），沒有用任何現成樣本。
+音效用程式合成（`music.py`）；配樂目前用 Mixkit 的《Summer's Here》（免費授權，放在 `promo/out/mixkit-summers-here-91.mp3`，不進版控），也可以不指定音樂檔，改用程式合成的原創配樂。
 
 ## 重新製作
 
 ```bash
 python promo/render.py cues      # 輸出音效提示 promo/out/cues.json
-python promo/music.py            # 合成配樂與音效 promo/out/music.wav
+python promo/music.py --music-file promo/out/mixkit-summers-here-91.mp3   # 音效 + 指定的配樂 → promo/out/music.wav
+#（不加 --music-file 就用程式合成的配樂）
 python promo/render.py video     # 渲染無聲影片 promo/out/video_silent.mp4（約 1.5 分鐘）
 ```
 
@@ -17,7 +18,7 @@ python promo/render.py video     # 渲染無聲影片 promo/out/video_silent.mp4
 ffmpeg -y -i promo/out/video_silent.mp4 -i promo/out/music.wav -map 0:v -map 1:a \
   -vf "scale=in_range=full:out_range=limited:out_color_matrix=bt709,format=yuv420p" \
   -c:v libx264 -preset slow -crf 17 -color_range tv -colorspace bt709 -color_primaries bt709 -color_trc bt709 \
-  -c:a aac -b:a 192k -ar 44100 -t 44.4 -movflags +faststart "promo/out/MakoSing-示範影片.mp4"
+  -c:a aac -b:a 192k -ar 44100 -t 52.28 -movflags +faststart "promo/out/MakoSing-示範影片.mp4"
 ```
 
 檢查畫面：`python promo/render.py frames 12.5 31.9 45` 會把這幾個時間點的畫面存到 `promo/out/frame_*.jpg`。

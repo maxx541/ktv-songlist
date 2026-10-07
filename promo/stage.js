@@ -3,7 +3,7 @@
 const YT_LINK = 'https://www.youtube.com/watch?v=KeuXa4_xcf0';
 const BILI_LINK = 'https://www.bilibili.com/video/BV1bzBxYdEZc/?spm_id_from=333.788.top_right_bar_window_custom_collection.content.click';
 const SHARE = '【【纯k投屏】「IF*Else」——mochari ディメンション凸ラバース!!  ED-哔哩哔哩】 https://b23.tv/Ck414WP';
-const NAME = '有地將臣', EVENT = '米娜', PLACE = '好樂迪', DATE = '2026-10-10';
+const NAME = '有地將臣', EVENT = '國慶唱K', PLACE = '米娜', DATE = '2026-10-10';
 
 // ---------- 版面常數（舞台座標）----------
 const SC = 772 / 390;          // 網站像素 → 舞台像素
@@ -62,11 +62,12 @@ const maxScroll = () => Math.max(0, fwin().document.documentElement.scrollHeight
 const centerOn = (key) => () => { const c = cardByTitle(key); if (!c) return 0; const r = c.getBoundingClientRect(); return clamp(fwin().scrollY + r.top - (fwin().innerHeight - r.height) / 2, 0, maxScroll()); };
 
 // ---------- 時間（秒） ----------
-const INTRO_END = 3.6;
-const PHONE_IN = [3.2, 4.2];
-const S1 = 3.8, S2 = 8.2, S3 = 13.2, S4 = 25.6, S4_END = 38.4;
-const PHONE_OUT = [S4_END, S4_END + 0.8], OUTRO_AT = S4_END + 1.0;
-const TOTAL = OUTRO_AT + 5.0;
+const K = 1.2;   // 全部操作的時間拉長倍率（>1 比較慢）；動畫本身的長短不變
+let INTRO_END = 3.6;
+let PHONE_IN = [3.2, 4.2];
+let S1 = 3.8, S2 = 8.2, S3 = 13.2, S4 = 25.6, S4_END = 38.4;
+let PHONE_OUT = [S4_END, S4_END + 0.8], OUTRO_AT = S4_END + 1.0;
+let TOTAL = OUTRO_AT + 5.0;
 
 const SCENES = [
   { t0: S1, t1: S2, no: '1', title: '登入', cap: '輸入暱稱就能開始，不用註冊' },
@@ -138,10 +139,21 @@ scrollTween(T4 + 9.5, T4 + 9.9, () => 0);
 tap(T4 + 10.2, '#only-dup', click('#only-dup'));
 tap(T4 + 11.0, '#only-dup', click('#only-dup'));
 tap(T4 + 11.6, '#event-select');
-MENUS.push({ t0: T4 + 11.65, t1: T4 + 12.5, anchor: '#event-select', items: ['上次日K', '米娜', '＋ 新增活動…'], hover: [[T4 + 11.65, -1], [T4 + 11.95, 0]] });
+MENUS.push({ t0: T4 + 11.65, t1: T4 + 12.5, anchor: '#event-select', items: ['上次日K', '國慶唱K', '＋ 新增活動…'], hover: [[T4 + 11.65, -1], [T4 + 11.95, 0]] });
 tap(T4 + 12.3, { menu: 0 }, selectEvent('e0'));
 for (const j of JUMPS) { at(j.t0 - 0.05, () => { j.info = jumpInfo(j.key); }); cue(j.t0, 'swipe'); cue(j.t1 - 0.3, 'swipe'); }
 
+// ---------- 統一拉長時間（倍率 K）----------
+// 上面所有時間都是照「快版」寫的，這裡一次乘上 K；點擊接近、輸入速度、停留時間都會跟著變慢，動畫本身的長短不變。
+{
+  const sc = (x) => x * K;
+  for (const l of [ACTIONS, CUES, TAPS]) for (const e of l) e.t = sc(e.t);
+  for (const l of [FLASHES, BADGES, CONFIRMS, MENUS, RINGS, JUMPS, SCROLLS, SCENES]) for (const e of l) { if ('t0' in e) { e.t0 = sc(e.t0); e.t1 = sc(e.t1); } }
+  for (const c of CONFIRMS) c.press = c.press.map(sc);
+  for (const m of MENUS) m.hover = m.hover.map(([t, v]) => [sc(t), v]);
+  INTRO_END = sc(INTRO_END); PHONE_IN = PHONE_IN.map(sc); PHONE_OUT = PHONE_OUT.map(sc);
+  S1 = sc(S1); S2 = sc(S2); S3 = sc(S3); S4 = sc(S4); S4_END = sc(S4_END); OUTRO_AT = sc(OUTRO_AT); TOTAL = OUTRO_AT + 5.0;
+}
 ACTIONS.sort((a, b) => a.t - b.t);
 TAPS.sort((a, b) => a.t - b.t);
 CUES.sort((a, b) => a.t - b.t);

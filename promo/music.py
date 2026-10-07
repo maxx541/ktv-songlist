@@ -1,21 +1,30 @@
 """MakoSing 示範影片的原創配樂與音效（純 numpy 合成，不用任何樣本）。
 讀 promo/out/cues.json（stage.js 產生的音效提示），輸出 promo/out/music.wav（立體聲 44.1kHz）。
-曲風：快節奏的 city-pop／future-pop，C 大調，BPM 140。段落跟影片對齊（時間由 cues.json 的 sections 決定）：
+曲風：快節奏的 city-pop／future-pop，C 大調，BPM 128。段落跟影片對齊（時間由 cues.json 的 sections 決定）：
   片頭（鋪底與亮晶晶的鈴聲）→ 節奏進來 → 加入十六分音符琶音 → 最後一段更飽滿 → 收尾、長音結束。
-用法：python promo/music.py
+用法：python promo/music.py                              （用自己合成的配樂）
+      python promo/music.py --music-file 某首.mp3 [起點秒數]  （配樂換成指定的音樂檔；音效仍是合成的）
 """
 import json
 import os
+import subprocess
+import sys
 
 import numpy as np
 import soundfile as sf
 
 SR = 44100
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out')
-BPM = 140
+BPM = 128
 BEAT = 60 / BPM
 BAR = BEAT * 4
 rng = np.random.default_rng(7)
+
+FFMPEG = r'C:\Program Files (x86)\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe'
+_i = sys.argv.index('--music-file') if '--music-file' in sys.argv else -1
+EXT = sys.argv[_i + 1] if _i >= 0 else None
+EXT_START = float(sys.argv[_i + 2]) if _i >= 0 and len(sys.argv) > _i + 2 else 0.0
+EXT_GAIN = 0.62      # 外部音樂本身很大聲（真峰值超過 0 dBFS），先壓一點，音效才聽得清楚
 
 cues = json.load(open(os.path.join(OUT, 'cues.json'), encoding='utf-8'))
 TOTAL = cues['total'] + 1.6               # 後面多留一小段殘響
@@ -234,6 +243,15 @@ for sec_bar in (B_GROOVE, B_ARP, B_FULL):
 # 片頭的亮晶晶：五聲音階往上
 for k, p in enumerate([76, 79, 83, 84, 88, 91]):
     put(send, 0.5 + k * 0.2, bell(midi(p), 1.2, 0.8), pan=(-1) ** k * 0.4)
+# ---------- 外部音樂：取代上面合成的配樂 ----------
+if EXT:
+    raw = subprocess.run([FFMPEG, '-v', 'error', '-ss', str(EXT_START), '-i', EXT, '-ar', str(SR), '-ac', '2', '-f', 'f32le', '-'], capture_output=True, check=True).stdout
+    ext = np.frombuffer(raw, dtype=np.float32).reshape(-1, 2).astype(np.float64)
+    if len(ext) < N:                                   # 音樂比影片短就循環
+        ext = np.tile(ext, (int(np.ceil(N / len(ext))), 1))
+    music[:] = ext[:N] * EXT_GAIN
+    send[:] = 0
+
 # ---------- 殘響 ----------
 ir_n = int(1.6 * SR)
 ir = np.stack([rng.standard_normal(ir_n) * np.exp(-np.arange(ir_n) / SR / 0.45) for _ in range(2)], axis=1)
@@ -326,6 +344,9 @@ for c in cues['cues']:
         g = 1 - 0.25 * np.exp(-seg / (0.25 * SR))
         duck[i:i + len(seg)] = np.minimum(duck[i:i + len(seg)], g[: N - i])
 mix = music * duck[:, None] * 0.9 + sfx * 0.85
+if EXT:
+    # 外部音樂本來就母帶處理過、峰值很高，直接正規化會偏小聲；用輕微的軟限幅把中段音量拉上來，峰值不變
+    mix = np.tanh(1.5 * mix) / np.tanh(1.5)
 # 開頭淡入、結尾淡出
 mix *= np.minimum(T / 0.6, 1.0)[:, None]
 mix *= np.clip((TOTAL - T) / 1.4, 0, 1)[:, None]
