@@ -102,6 +102,7 @@ input:not([type]), input[type="text"], input[type="url"], input[type="search"], 
 }
 textarea { resize: vertical; line-height: 1.6; }
 select { font: inherit; color: inherit; cursor: pointer; text-overflow: ellipsis; }
+textarea.cmd { font-family: ui-monospace, Consolas, "Cascadia Mono", monospace; font-size: .8rem; line-height: 1.55; word-break: break-all; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
 ::placeholder { color: #8a8396; }
 .check { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }

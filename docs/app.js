@@ -1,5 +1,5 @@
 // MakoSing — 前端畫面
-import { extractVideoId, thumbnailFor, findDuplicates, youtubeSearchUrl, embedUrl } from './shared.js';
+import { extractVideoId, thumbnailFor, findDuplicates, youtubeSearchUrl, embedUrl, ytdlpCommands, ytdlpFolder } from './shared.js';
 import { tachie } from './tachie.js';
 import * as store from './store.js';
 import * as yt from './youtube.js';
@@ -264,6 +264,7 @@ function renderMine() {
   list.replaceChildren();
   const songs = mySongs();
   $('#clear-mine').hidden = songs.length === 0;
+  $('#dl-btn').hidden = ytdlpCommands(songs).length === 0;
   if (!songs.length) {
     list.append(h('li', { class: 'empty' }, h('p', {}, curEvent() ? '你還沒有點歌。' : '請先在上方選擇要參與的活動。')));
     return;
@@ -658,6 +659,46 @@ $('#nick-form').addEventListener('submit', async (e) => {
   }
 });
 
+// ---------- 批次下載指令（yt-dlp） ----------
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch { /* 改用舊方法 */ }
+  const ta = h('textarea', { style: 'position:fixed;opacity:0' }, text);
+  document.body.append(ta); ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { /* ignore */ }
+  ta.remove();
+  return ok;
+}
+
+function openDownloadDialog() {
+  const songs = mySongs();
+  const cmds = ytdlpCommands(songs, curEvent()?.name || '');
+  if (!cmds.length) return toast('沒有可以下載的歌', 'error');
+  const hasBili = songs.some((s) => /bilibili\.com|b23\.tv/i.test(s.url));
+  const body = $('#dl-body');
+  body.replaceChildren(
+    h('p', { class: 'muted small' }, cmds.length > 1 ? `共 ${cmds.length} 段，依序貼到 cmd 執行（需安裝 yt-dlp、ffmpeg）` : '貼到 cmd 執行（需安裝 yt-dlp、ffmpeg）'),
+    ...cmds.map((cmd, i) => {
+      const box = h('textarea', { class: 'cmd', readonly: true, rows: 7, 'aria-label': `下載指令 ${i + 1}`, spellcheck: false }, cmd);
+      box.addEventListener('focus', () => box.select());
+      return h('div', { class: 'stack' },
+        cmds.length > 1 ? h('strong', {}, `第 ${i + 1} 段`) : null,
+        box,
+        h('button', { class: 'btn primary', onclick: async (e) => {
+          const btn = e.currentTarget; // await 之後 currentTarget 會變空，先留著
+          const ok = await copyText(cmd);
+          if (!ok) box.select();
+          toast(ok ? '已複製，貼到 cmd 就能下載' : '請手動複製選取的文字', ok ? '' : 'error');
+          btn.textContent = ok ? '已複製' : '複製';
+        } }, '複製'),
+      );
+    }),
+    h('p', { class: 'muted small' }, `720p・最高音質・mp4 → 下載\\MakoSing\\${ytdlpFolder(curEvent()?.name)}`),
+    hasBili ? h('p', { class: 'muted small' }, 'B 站未登入通常只到 480p；要 720p 請加 --cookies-from-browser edge') : null,
+  );
+  $('#dl-dialog').showModal();
+}
+
 // ---------- 活動選單與活動對話框 ----------
 /** 「我的歌」旁邊的下拉選單：選了就是參與那個活動，之後加的歌都存進去 */
 function renderEventPicker() {
@@ -755,6 +796,7 @@ $('#setup-cancel').addEventListener('click', () => store.logout());
 for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', () => switchTab(b.dataset.tab));
 for (const b of document.querySelectorAll('#source-tabs button')) b.addEventListener('click', () => setSource(b.dataset.source));
 $('#add-btn').addEventListener('click', () => openAddDialog());
+$('#dl-btn').addEventListener('click', openDownloadDialog);
 $('#filter').addEventListener('input', (e) => { S.filter = e.target.value; renderEveryone(); });
 $('#only-dup').addEventListener('change', (e) => { S.onlyDup = e.target.checked; renderEveryone(); });
 $('#clear-mine').addEventListener('click', async () => {

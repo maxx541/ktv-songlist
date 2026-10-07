@@ -10,8 +10,8 @@
   <title>MakoSing</title>
   <link rel="icon" type="image/png" href="img/favicon.png">
   <link rel="apple-touch-icon" href="img/logo.png">
-  <link rel="stylesheet" href="style.css?v=20261007f">
-  <script type="module" src="app.js?v=20261007f"></script>
+  <link rel="stylesheet" href="style.css?v=20261007g">
+  <script type="module" src="app.js?v=20261007g"></script>
 </head>
 <body>
   <div id="inapp-banner" class="banner" hidden>
@@ -94,6 +94,7 @@
       <div id="tab-mine" class="tabpanel" hidden>
         <div class="toolbar">
           <button id="add-btn" class="btn primary">＋ 加歌</button>
+          <button id="dl-btn" class="btn ghost" hidden>下載指令</button>
           <span class="spacer"></span>
           <button id="clear-mine" class="btn ghost danger-text">清空我的歌</button>
         </div>
@@ -136,6 +137,15 @@
         <button type="submit" class="btn primary">儲存</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- 批次下載指令（yt-dlp） -->
+  <dialog id="dl-dialog" class="sheet">
+    <div class="sheet-head">
+      <h2>批次下載</h2>
+      <button class="icon-btn" type="button" data-close aria-label="關閉"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div id="dl-body" class="sheet-body"></div>
   </dialog>
 
   <!-- 新增／編輯活動 -->

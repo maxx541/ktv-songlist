@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractVideoId, extractPlaylistId, normalizeTitle, findDuplicates, cleanNickname, isVideoId, videoUrl, thumbnailFor, normalizePasted, parseShared, embedUrl, isBilibiliCover } from '../docs/shared.js';
+import { extractVideoId, extractPlaylistId, normalizeTitle, findDuplicates, cleanNickname, isVideoId, videoUrl, thumbnailFor, normalizePasted, parseShared, embedUrl, isBilibiliCover, ytdlpCommands } from '../docs/shared.js';
 
 test('extractVideoId 支援各種 YouTube 網址', () => {
   const id = 'DYptgVvkVLQ';
@@ -86,6 +86,31 @@ test('parseShared：分享文字取出網址與備用歌名', () => {
   assert.equal(parseShared('<iframe src="//player.bilibili.com/player.html?bvid=BV1Uppw6yEMr&p=1"></iframe>').url, 'https://www.bilibili.com/video/BV1Uppw6yEMr');
   // 沒有網址：原樣回傳
   assert.deepEqual(parseShared('隨便打字'), { url: '隨便打字', title: '' });
+});
+
+test('ytdlpCommands：批次下載指令', () => {
+  const songs = [
+    { url: 'https://www.youtube.com/watch?v=K2A5HSbAy9I&list=PL1' },
+    { url: 'https://www.bilibili.com/video/BV1bzBxYdEZc' },
+    { url: 'https://www.bilibili.com/video/BV1bzBxYdEZc' },                   // 重複的網址只留一個
+    { url: 'https://www.youtube.com/results?search_query=%E6%99%B4%E5%A4%A9' }, // 搜尋連結不是影片
+    { url: 'javascript:alert(1)' }, { url: '' }, { url: 'https://example.com/a"b' }, { url: 'https://example.com/%25x' },
+  ];
+  const [cmd, ...rest] = ytdlpCommands(songs, '米娜 / 好:樂*迪');
+  assert.equal(rest.length, 0);
+  assert.match(cmd, /^yt-dlp -f "bv\*\[height<=720\]\[ext=mp4\]\+ba\[ext=m4a\]/);          // 720p 以內、AAC 最高音質
+  assert.ok(cmd.includes('--merge-output-format mp4') && cmd.includes('--no-playlist') && cmd.includes('--windows-filenames'));
+  assert.ok(cmd.includes('"%USERPROFILE%\\Downloads\\MakoSing\\米娜 好樂迪"'));            // 資料夾名稱去掉不能用的字元
+  assert.ok(cmd.includes('"https://www.youtube.com/watch?v=K2A5HSbAy9I&list=PL1"'));       // 網址有雙引號保護 &
+  assert.equal(cmd.split('bilibili.com').length - 1, 1);
+  assert.ok(!cmd.includes('results') && !cmd.includes('javascript') && !cmd.includes('a"b') && !cmd.includes('%25x'));
+  assert.deepEqual(ytdlpCommands([{ url: 'https://www.youtube.com/results?search_query=x' }]), []);
+  assert.ok(ytdlpCommands([{ url: 'https://youtu.be/DYptgVvkVLQ' }], '')[0].includes('\\MakoSing"'));  // 沒有名稱就用預設資料夾
+  // 太長要拆成多段，每段都是完整指令，網址一個不少
+  const many = Array.from({ length: 200 }, (_, i) => ({ url: `https://www.youtube.com/watch?v=${String(i).padStart(11, 'x')}` }));
+  const parts = ytdlpCommands(many, 'a');
+  assert.ok(parts.length > 1 && parts.every((p) => p.length <= 7100 && p.startsWith('yt-dlp ')));
+  assert.equal(parts.join(' ').split('watch?v=').length - 1, 200);
 });
 
 test('embedUrl 只給 bilibili', () => {

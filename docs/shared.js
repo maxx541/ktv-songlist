@@ -107,6 +107,45 @@ export function extractPlaylistId(input) {
   return list && /^[\w-]{2,64}$/.test(list) ? list : null;
 }
 
+/**
+ * yt-dlp 格式：畫質最高 720p；音質選最高的 AAC（m4a，mp4 都能放）；沒有 m4a 才退而求其次用其他最高音質；輸出 mp4。
+ * 影片來源是 B 站時一樣適用（yt-dlp 內建 B 站解析器，直接貼網址就能下載）。
+ */
+export const YTDLP_FORMAT = 'bv*[height<=720][ext=mp4]+ba[ext=m4a]/bv*[height<=720]+ba/b[height<=720]';
+
+/** 活動名稱 → 可以當資料夾名稱的字串（拿掉 Windows 不能用的字元；空的就用預設名稱） */
+export function ytdlpFolder(name) {
+  return String(name || '').replace(/[\\/:*?"<>|%^!&]/g, '').replace(/\s+/g, ' ').replace(/[.\s]+$/g, '').trim().slice(0, 40) || 'MakoSing';
+}
+
+/**
+ * 把一批歌變成可以直接貼到 Windows cmd 執行的 yt-dlp 指令。
+ * - 只收 http(s) 網址；YouTube「搜尋連結」（沒挑到影片時自動產生的）不是影片，略過；重複的網址只留一個
+ * - 每個網址都用雙引號包起來（網址裡常有 & ）；cmd 一行最多約 8191 字，超過就拆成多段，每段是一條完整指令
+ * - 檔案放在 %USERPROFILE%\Downloads\MakoSing\<資料夾名稱>，檔名是「標題 [影片ID]」
+ * @returns {string[]} 指令（沒有可下載的歌就是空陣列）
+ */
+export function ytdlpCommands(songs, folderName = '', maxLen = 7000) {
+  const urls = [];
+  for (const s of songs) {
+    const u = String(s?.url || '').trim();
+    if (!/^https?:\/\//i.test(u) || /youtube\.com\/results/i.test(u) || /["%^]/.test(u)) continue;
+    if (!urls.includes(u)) urls.push(u);
+  }
+  if (!urls.length) return [];
+  const dir = ytdlpFolder(folderName);
+  const head = `yt-dlp -f "${YTDLP_FORMAT}" --merge-output-format mp4 --no-playlist --windows-filenames`
+    + ` -P "%USERPROFILE%\\Downloads\\MakoSing\\${dir}" -o "%(title).100s [%(id)s].%(ext)s"`;
+  const out = [];
+  let cur = head;
+  for (const u of urls) {
+    if (cur.length + u.length + 3 > maxLen && cur !== head) { out.push(cur); cur = head; }
+    cur += ` "${u}"`;
+  }
+  out.push(cur);
+  return out;
+}
+
 /** bilibili 封面網址要是 hdslb.com 的 https 圖片（資料庫規則也用同樣條件） */
 export const isBilibiliCover = (u) => typeof u === 'string' && u.length <= 500 && /^https:\/\/([a-z0-9-]+\.)*hdslb\.com\/.+/.test(u);
 
