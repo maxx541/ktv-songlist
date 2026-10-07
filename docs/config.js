@@ -3,10 +3,10 @@
 
 // Firebase 主控台 → 專案設定 → 一般 → 你的應用程式 → SDK 設定和配置（選「設定」）
 export const firebaseConfig = {
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  appId: '',
+  apiKey: 'AIzaSyDZuABkLUb20aZCgYZ43Ro5XRfR4l8M8ho',
+  authDomain: 'ktv-songlist-541-665a0.firebaseapp.com',
+  projectId: 'ktv-songlist-541-665a0',
+  appId: '1:348753630362:web:a7359bf2e6e9e3fa7ffb23',
 };
 
 // 讀取 YouTube 播放清單用的 OAuth 用戶端 ID。
