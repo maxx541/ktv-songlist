@@ -664,10 +664,11 @@ function renderEventPicker() {
   const ev = curEvent();
   sel.replaceChildren(
     ...(ev ? [] : [h('option', { value: '' }, '選擇活動…')]),
-    ...sortedEvents().map((e) => h('option', { value: e.id }, eventLabel(e))),
+    ...sortedEvents().map((e) => h('option', { value: e.id }, e.name)), // 選單只顯示名稱
     h('option', { value: '__new' }, '＋ 新增活動…'),
   );
   sel.value = ev ? ev.id : '';
+  sel.title = ev ? eventLabel(ev) : '選擇要參與的活動'; // 日期與位置只在滑鼠停留時顯示
   $('#event-edit').hidden = !(ev && ev.createdBy === S.me?.id); // 只有建立者能改
 }
 

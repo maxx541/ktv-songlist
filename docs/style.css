@@ -136,8 +136,19 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 /* 分頁 */
 .tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
 /* 「我的歌」旁邊的目前活動下拉選單 */
-.event-pick { display: flex; align-items: center; gap: 6px; margin-left: 12px; flex: 1; min-width: 0; max-width: 520px; padding-bottom: 2px; }
-.event-pick select { min-height: 36px; padding: 6px 10px; flex: 1; min-width: 0; }
+.event-pick { display: flex; align-items: center; gap: 8px; margin-left: 12px; flex: 0 1 360px; min-width: 0; padding-bottom: 2px; }
+.ev-ic { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+.event-pick select {
+  appearance: none; -webkit-appearance: none; flex: 1; min-width: 0; min-height: 38px; padding: 7px 38px 7px 16px;
+  border: 1px solid var(--border); border-radius: 999px; background-color: var(--surface); font-weight: 600; color: var(--text);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a4fd6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; background-size: 18px;
+  transition: border-color .15s, background-color .15s;
+}
+.event-pick select:hover { border-color: var(--accent); background-color: var(--accent-soft); }
+.event-pick select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.event-pick .icon-btn { flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+.event-pick .icon-btn:hover { background: var(--accent); color: var(--accent-ink); }
 .tab {
   background: none; border: 0; border-bottom: 3px solid transparent; padding: 10px 14px; cursor: pointer;
   font-weight: 600; color: var(--muted); margin-bottom: -1px;
@@ -261,7 +272,7 @@ dialog::backdrop { background: rgb(30 20 45 / .45); }
 
 /* 手機 */
 @media (max-width: 640px) {
-  .event-pick { order: 3; flex: 1 0 100%; max-width: none; margin: 0; padding: 6px 0 8px; }
+  .event-pick { order: 3; flex: 1 0 100%; margin: 0; padding: 6px 0 10px; }
   .topbar { padding: 10px 16px; }
   .topbar h1 { font-size: 1.05rem; }
   .me-name { max-width: 6em; }
