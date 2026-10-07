@@ -1,0 +1,65 @@
+rules_version = '2';
+
+// KTV 點歌整理的資料權限
+// - 登入的人可以看到所有人的暱稱和歌
+// - 只能新增／修改／刪除自己的歌、自己的個人資料
+// - 暱稱不能重複：nicknames/{暱稱鍵} 一個暱稱只會有一份文件（文件 ID = 'n_' + 小寫暱稱）
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isStr(v, min, max) {
+      return v is string && v.size() >= min && v.size() <= max;
+    }
+
+    match /nicknames/{key} {
+      // 登入前要查暱稱有沒有人用，所以允許單筆讀取，但不能列出全部
+      allow get: if true;
+      allow list: if false;
+      allow create: if signedIn()
+        && isStr(key, 3, 100)
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /users/{uid} {
+      function validUser() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['nickname', 'nicknameKey', 'avatar', 'provider', 'createdAt', 'updatedAt'])
+          && isStr(d.nickname, 1, 20)
+          && d.nicknameKey == 'n_' + d.nickname.lower()
+          && (d.avatar == null || (isStr(d.avatar, 9, 500) && d.avatar.matches('^https://.*')))
+          && d.provider in ['google', 'anonymous']
+          // 暱稱一定要是自己登記的
+          && getAfter(/databases/$(database)/documents/nicknames/$(d.nicknameKey)).data.uid == request.auth.uid;
+      }
+      allow read: if signedIn();
+      allow create, update: if signedIn() && request.auth.uid == uid && validUser();
+      allow delete: if false;
+    }
+
+    match /songs/{songId} {
+      function validSong() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['userId', 'title', 'url', 'videoId', 'channel', 'order', 'createdAt', 'updatedAt'])
+          && d.userId == request.auth.uid
+          && isStr(d.title, 1, 200)
+          && isStr(d.url, 8, 1000) && d.url.matches('^https?://.*')
+          && (d.videoId == null || (d.videoId is string && d.videoId.matches('^[A-Za-z0-9_-]{11}$')))
+          && isStr(d.channel, 0, 100)
+          && d.order is number;
+      }
+      allow read: if signedIn();
+      allow create: if signedIn() && validSong();
+      allow update: if signedIn() && resource.data.userId == request.auth.uid && validSong();
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

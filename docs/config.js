@@ -1,0 +1,18 @@
+// 網站設定：建立 Firebase 專案後，把下面的值換成你自己的（步驟見 README）。
+// 這些值本來就會出現在網頁原始碼裡，不是機密；真正的保護靠 firestore.rules。
+
+// Firebase 主控台 → 專案設定 → 一般 → 你的應用程式 → SDK 設定和配置（選「設定」）
+export const firebaseConfig = {
+  apiKey: '',
+  authDomain: '',
+  projectId: '',
+  appId: '',
+};
+
+// 讀取 YouTube 播放清單用的 OAuth 用戶端 ID。
+// Firebase 主控台 → Authentication → 登入方式 → Google → 「網路 SDK 設定」裡的「網路用戶端 ID」
+export const googleClientId = '';
+
+// 選填：YouTube Data API 金鑰（限制只能從你的網址使用）。
+// 有填的話，沒連結 YouTube 的人也能用「播放清單網址」匯入公開清單。
+export const youtubeApiKey = '';
