@@ -496,7 +496,7 @@ function renderLinkSource(body) {
   } }, input, h('button', { class: 'btn', type: 'submit' }, '解析'));
   body.append(h('div', { class: 'block' },
     h('h3', {}, add.replace ? '貼上新歌的連結' : '貼上連結'),
-    h('p', { class: 'muted small' }, 'YouTube 會自動抓歌名和縮圖；其他網站（KKBOX、Spotify…）請自己輸入歌名。'),
+    h('p', { class: 'muted small' }, 'YouTube 會自動抓歌名和縮圖；bilibili（bilibili.com/video/BV…）和其他網站（KKBOX、Spotify…）請自己輸入歌名，bilibili 同一支影片一樣會標「重複」。b23.tv 短網址請先在瀏覽器打開，複製完整網址再貼。'),
     form, result));
   setTimeout(() => input.focus(), 50);
 }

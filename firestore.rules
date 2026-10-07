@@ -52,7 +52,7 @@ service cloud.firestore {
           && d.userId == request.auth.uid
           && isStr(d.title, 1, 200)
           && isStr(d.url, 8, 1000) && d.url.matches('^https?://.*')
-          && (d.videoId == null || (d.videoId is string && d.videoId.matches('^[A-Za-z0-9_-]{11}$')))
+          && (d.videoId == null || (d.videoId is string && (d.videoId.matches('^[A-Za-z0-9_-]{11}$') || d.videoId.matches('^BV1[A-Za-z0-9]{9}$'))))
           && isStr(d.channel, 0, 100)
           && d.order is number;
       }

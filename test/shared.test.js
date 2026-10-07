@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractVideoId, extractPlaylistId, normalizeTitle, findDuplicates, cleanNickname } from '../docs/shared.js';
+import { extractVideoId, extractPlaylistId, normalizeTitle, findDuplicates, cleanNickname, isVideoId, videoUrl, thumbnailFor } from '../docs/shared.js';
 
 test('extractVideoId 支援各種 YouTube 網址', () => {
   const id = 'DYptgVvkVLQ';
@@ -18,6 +18,34 @@ test('extractVideoId 支援各種 YouTube 網址', () => {
   assert.equal(extractVideoId('DYptgVvkVLQ'), null);
   assert.equal(extractVideoId('not a url'), null);
   assert.equal(extractVideoId(''), null);
+});
+
+test('extractVideoId 支援 bilibili BV 號', () => {
+  const bv = 'BV1GJ411x7h7';
+  for (const u of [
+    `https://www.bilibili.com/video/${bv}`,
+    `https://www.bilibili.com/video/${bv}/?spm_id_from=333.1007&vd_source=abc`,
+    `https://bilibili.com/video/${bv}?p=2`,
+    `https://m.bilibili.com/video/${bv}`,
+  ]) assert.equal(extractVideoId(u), bv, u);
+  assert.equal(extractVideoId('https://b23.tv/abcdEFg'), null); // 短網址認不出來，當一般連結
+  assert.equal(extractVideoId('https://www.bilibili.com/video/av170001'), null);
+  assert.equal(extractVideoId('https://example.com/video/BV1GJ411x7h7'), null);
+  assert.equal(extractVideoId('https://www.bilibili.com/video/BV1GJ411x7'), null); // 長度不對
+});
+
+test('isVideoId、videoUrl、thumbnailFor 同時處理 YouTube 與 bilibili', () => {
+  assert.ok(isVideoId('DYptgVvkVLQ') && isVideoId('BV1GJ411x7h7'));
+  assert.ok(!isVideoId('BV1GJ411x7h7x') &&!isVideoId('short') && !isVideoId(null));
+  assert.equal(videoUrl('BV1GJ411x7h7'), 'https://www.bilibili.com/video/BV1GJ411x7h7');
+  assert.equal(videoUrl('DYptgVvkVLQ'), 'https://www.youtube.com/watch?v=DYptgVvkVLQ');
+  assert.equal(thumbnailFor('BV1GJ411x7h7'), null);
+  assert.match(thumbnailFor('DYptgVvkVLQ'), /ytimg\.com/);
+});
+
+test('findDuplicates：同一支 bilibili 影片算重複', () => {
+  const songs = [{ id: '1', userId: 'a', title: '某首歌', videoId: 'BV1GJ411x7h7' }];
+  assert.deepEqual(findDuplicates({ title: '完全不同', videoId: 'BV1GJ411x7h7' }, songs).map((d) => d.level), ['same']);
 });
 
 test('extractPlaylistId', () => {

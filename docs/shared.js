@@ -2,14 +2,39 @@
 // 這個檔同時被瀏覽器（public/app.js）和伺服器（server.js、測試）import。
 
 const VIDEO_ID_RE = /^[\w-]{11}$/;
+// bilibili 的 BV 號：BV1 開頭、共 12 碼（YouTube 影片 ID 是 11 碼，不會撞）
+const BILIBILI_ID_RE = /^BV1[1-9A-HJ-NP-Za-km-z]{9}$/;
 
-/** 從各種 YouTube 網址取出影片 ID（watch、youtu.be、shorts、embed、live、music.youtube.com） */
+/** 可以存進 videoId 欄位的值：YouTube 11 碼，或 bilibili BV 號 */
+export const isVideoId = (v) => typeof v === 'string' && (VIDEO_ID_RE.test(v) || BILIBILI_ID_RE.test(v));
+
+/** videoId 是 bilibili 的 BV 號嗎 */
+export const isBilibiliId = (v) => typeof v === 'string' && BILIBILI_ID_RE.test(v);
+
+/** videoId → 標準影片網址 */
+export function videoUrl(videoId) {
+  return isBilibiliId(videoId)
+    ? `https://www.bilibili.com/video/${videoId}`
+    : `https://www.youtube.com/watch?v=${videoId}`;
+}
+
+/** 從 bilibili 影片網址取出 BV 號（bilibili.com/video/BV…，含手機版）。b23.tv 短網址要轉址才知道，這裡認不出來 */
+function extractBilibiliId(url) {
+  const host = url.hostname.replace(/^(www|m)\./, '');
+  if (host !== 'bilibili.com') return null;
+  const m = url.pathname.match(/^\/video\/(BV\w{10})\/?/);
+  return m && BILIBILI_ID_RE.test(m[1]) ? m[1] : null;
+}
+
+/** 從各種 YouTube／bilibili 網址取出影片 ID（YouTube：watch、youtu.be、shorts、embed、live、music.youtube.com；bilibili：BV 號） */
 export function extractVideoId(input) {
   if (!input) return null;
   const s = String(input).trim();
   if (VIDEO_ID_RE.test(s)) return null; // 單純 11 碼字串不當網址處理，避免誤判一般文字
   let url;
   try { url = new URL(s); } catch { return null; }
+  const bili = extractBilibiliId(url);
+  if (bili) return bili;
   const host = url.hostname.replace(/^(www|m|music)\./, '');
   if (host === 'youtu.be') {
     const id = url.pathname.slice(1).split('/')[0];
@@ -33,8 +58,9 @@ export function extractPlaylistId(input) {
   return list && /^[\w-]{2,64}$/.test(list) ? list : null;
 }
 
+/** 縮圖網址；bilibili 沒有可以直接用的縮圖網址，回傳 null（畫面會顯示預設圖示） */
 export function thumbnailFor(videoId) {
-  return videoId ? `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg` : null;
+  return videoId && !isBilibiliId(videoId) ? `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg` : null;
 }
 
 export function youtubeSearchUrl(title) {

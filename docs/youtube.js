@@ -1,7 +1,7 @@
 // YouTube：授權（Google Identity Services 權杖用戶端）、讀播放清單、解析貼上的網址
 // 全部在瀏覽器裡直接呼叫 Google API，不需要自己的伺服器。
 import { googleClientId, youtubeApiKey } from './config.js';
-import { extractVideoId, extractPlaylistId } from './shared.js';
+import { extractVideoId, extractPlaylistId, isBilibiliId, videoUrl } from './shared.js';
 
 const YT_SCOPE = 'https://www.googleapis.com/auth/youtube.readonly';
 const API = 'https://www.googleapis.com/youtube/v3';
@@ -192,6 +192,14 @@ export async function resolveUrl(raw) {
   }
   const videoId = extractVideoId(url.href);
   const playlistId = extractPlaylistId(url.href);
+  if (videoId && isBilibiliId(videoId)) {
+    // bilibili 的 API 不允許從其他網站呼叫（CORS），抓不到標題，只能認得是哪支影片
+    const p = Number(url.searchParams.get('p'));
+    return {
+      type: 'video', videoId, url: videoUrl(videoId) + (p > 1 ? `?p=${p}` : ''), title: '', channel: '',
+      warning: 'bilibili 抓不到影片標題，請自己輸入歌名',
+    };
+  }
   if (videoId) {
     const info = await videoInfo(videoId);
     return {

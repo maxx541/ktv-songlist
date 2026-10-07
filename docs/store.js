@@ -8,7 +8,7 @@ import {
   writeBatch, serverTimestamp, updateDoc, deleteDoc,
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-import { cleanNickname, nicknameDocId, extractVideoId, youtubeSearchUrl } from './shared.js';
+import { cleanNickname, nicknameDocId, extractVideoId, isVideoId, videoUrl, youtubeSearchUrl } from './shared.js';
 
 /** config.js 還沒填 Firebase 設定時，網站只會顯示「還沒設定好」 */
 export const configured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
@@ -188,8 +188,8 @@ export function buildSong(raw) {
   if (url === null) throw new UserError('連結格式不正確（要是 http:// 或 https:// 開頭的網址）');
   let videoId = null;
   if (url) videoId = extractVideoId(url);
-  else if (/^[\w-]{11}$/.test(raw.videoId || '')) videoId = raw.videoId;
-  if (!url) url = videoId ? `https://www.youtube.com/watch?v=${videoId}` : youtubeSearchUrl(title);
+  else if (isVideoId(raw.videoId)) videoId = raw.videoId;
+  if (!url) url = videoId ? videoUrl(videoId) : youtubeSearchUrl(title);
   return { title, url, videoId, channel: cleanText(raw.channel, 100) };
 }
 
