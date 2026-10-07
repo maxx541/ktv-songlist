@@ -11,7 +11,7 @@ export const firebaseConfig = {
 
 // 讀取 YouTube 播放清單用的 OAuth 用戶端 ID。
 // Firebase 主控台 → Authentication → 登入方式 → Google → 「網路 SDK 設定」裡的「網路用戶端 ID」
-export const googleClientId = '348753630362-i4r9e9s80ee35nnfpitf2p0154tqloa9.apps.googleusercontent.com';
+export const googleClientId = '348753630362-gopbritfhj0slf66jjn5mv03shutmskc.apps.googleusercontent.com';
 
 // 選填：YouTube Data API 金鑰（限制只能從你的網址使用）。
 // 有填的話，沒連結 YouTube 的人也能用「播放清單網址」匯入公開清單。
