@@ -6,3 +6,4 @@ node_modules/
 .claude/
 promo/build/
 promo/out/
+__pycache__/
