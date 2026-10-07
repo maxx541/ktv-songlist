@@ -125,6 +125,18 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   max-width: calc((100vw - 440px) / 2 + 48px); /* 不超過登入卡兩側的空間（最多讓出 48px 疊在卡片後面） */
 }
 .tachie:not(.ready) { visibility: hidden; }
+/* 立繪可以點：彈跳一下（腳底為軸心，有一點壓扁與拉長），有語音的角色同時播一句 */
+.tachie img { pointer-events: auto; cursor: pointer; transform-origin: 50% 100%; -webkit-tap-highlight-color: transparent; -webkit-user-drag: none; }
+.tachie img.bounce { animation: tachie-bounce .6s cubic-bezier(.28, .84, .42, 1); }
+@keyframes tachie-bounce {
+  0%   { transform: scale(1, 1); }
+  16%  { transform: scale(1.08, .88); }
+  40%  { transform: translateY(-30px) scale(.95, 1.07); }
+  62%  { transform: translateY(0) scale(1.05, .93); }
+  80%  { transform: scale(.99, 1.02); }
+  100% { transform: scale(1, 1); }
+}
+@media (prefers-reduced-motion: reduce) { .tachie img.bounce { animation: none; } }
 @media (max-width: 859px) {
   /* 手機：立繪縮小，貼在螢幕下方角落，卡片疊在它前面 */
   .tachie img { max-height: min(22vh, 190px, var(--cap, 9999px)); max-width: 40vw; }

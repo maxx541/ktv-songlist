@@ -126,17 +126,41 @@ const otherSongs = () => S.songs.filter((s) => s.userId !== S.me?.id);
 
 // ---------- 畫面 ----------
 let tachieShown = false;
+let voiceEls = [];      // 目前這個立繪的語音（預先載入，點的時候才不會延遲）
+let voiceNow = null;    // 正在播的那一句
+let voiceLast = -1;
+
+/** 點立繪：彈跳動畫；有語音的角色再隨機播一句（不會連續兩次同一句，新的一句會蓋掉還沒播完的） */
+function onTachieClick() {
+  const img = $('#tachie-img');
+  img.classList.remove('bounce');
+  void img.offsetWidth;                    // 強制重算版面，連續點擊動畫才會重新開始
+  img.classList.add('bounce');
+  if (!voiceEls.length) return;
+  let i = Math.floor(Math.random() * voiceEls.length);
+  if (voiceEls.length > 1 && i === voiceLast) i = (i + 1) % voiceEls.length;
+  voiceLast = i;
+  voiceNow?.pause();
+  voiceNow = voiceEls[i];
+  voiceNow.currentTime = 0;
+  voiceNow.play().catch(() => { /* 瀏覽器不讓播（例如靜音模式）就算了，動畫照樣有 */ });
+}
+$('#tachie-img').addEventListener('click', onTachieClick);
+$('#tachie-img').addEventListener('animationend', (e) => e.currentTarget.classList.remove('bounce'));
 /** 登入頁每次出現都隨機換一張立繪（不和上一張重複）；載入失敗就整個隱藏，不影響登入 */
 function pickTachie() {
   const box = $('#tachie');
   const img = $('#tachie-img');
   if (!tachie.length) return;
   let last = -1;
-  try { last = Number(localStorage.getItem('ktv-tachie')); } catch { /* ignore */ }
+  try { const saved = localStorage.getItem('ktv-tachie'); if (saved !== null) last = Number(saved); } catch { /* ignore */ }
   let i;
   do { i = Math.floor(Math.random() * tachie.length); } while (tachie.length > 1 && i === last);
   try { localStorage.setItem('ktv-tachie', String(i)); } catch { /* ignore */ }
   const t = tachie[i];
+  voiceNow?.pause();
+  voiceLast = -1;
+  voiceEls = (t.voices || []).map((src) => { const a = new Audio(src); a.preload = 'auto'; return a; });
   box.classList.remove('ready');
   box.dataset.side = Math.random() < 0.5 ? 'left' : 'right'; // 左下角或右下角
   box.style.setProperty('--cap', t.maxH ? `${t.maxH}px` : '9999px'); // 原圖很小的，限制顯示高度避免放大變糊

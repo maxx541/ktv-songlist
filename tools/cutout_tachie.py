@@ -9,6 +9,7 @@
 import glob
 import json
 import os
+import re
 import sys
 from collections import deque
 
@@ -121,8 +122,13 @@ def main():
         name = f'{i:02d}.webp'
         im.save(os.path.join(OUT, name), 'WEBP', quality=88, method=6)
         kb = os.path.getsize(os.path.join(OUT, name)) // 1024
-        # 原圖很小的，頁面上限制顯示高度，避免放大變糊（最多放大 1.6 倍）
-        manifest.append({'src': f'img/tachie/{name}', 'w': im.width, 'h': im.height, 'maxH': round(min(im.height, native_h) * 1.6) if native_h < 700 else None})
+        # 這個角色的點擊語音：docs/audio/<原圖檔名（不含副檔名）>/ 底下的 mp3（由 tools/make_voices.py 產生）
+        stem = os.path.splitext(os.path.basename(f))[0]
+        vdir = os.path.join(ROOT, 'docs', 'audio', stem)
+        voices = sorted((os.path.relpath(p, os.path.join(ROOT, 'docs')).replace(os.sep, '/') for p in glob.glob(os.path.join(vdir, '*.mp3'))),
+                        key=lambda s: [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', s)])
+        # maxH：原圖很小的，頁面上限制顯示高度，避免放大變糊（最多放大 1.6 倍）
+        manifest.append({'src': f'img/tachie/{name}', 'id': stem, 'voices': voices, 'w': im.width, 'h': im.height, 'maxH': round(min(im.height, native_h) * 1.6) if native_h < 700 else None})
         print(f'{name}  {os.path.basename(f)[:40]:40}  {im.width}x{im.height}  {kb}KB')
     js = '// 由 tools/cutout_tachie.py 產生，不要手動改。登入頁每次隨機挑一張。\nexport const tachie = ' + json.dumps(manifest, ensure_ascii=False, indent=2) + ';\n'
     with open(os.path.join(ROOT, 'docs', 'tachie.js'), 'w', encoding='utf-8', newline='\n') as fh:
