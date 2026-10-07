@@ -49,6 +49,24 @@ export function normalizePasted(input) {
   return s;
 }
 
+/**
+ * 使用者貼的可能是 App／網站「分享」出來的整段文字，例如 bilibili：
+ *   【【纯k投屏】「IF*Else」——mochari ED】 https://www.bilibili.com/video/BV1Va9yBmEfH/?share_source=copy_web
+ * 這裡把「網址」和「前面的歌名」分開。順便處理 iframe 嵌入代碼。
+ * 歌名只是備案（查不到標題時用），所以去掉分享格式最外層的【】與網站名稱後綴；沒有就回傳空字串。
+ * @returns {{ url: string, title: string }}
+ */
+export function parseShared(input) {
+  const s = normalizePasted(input);
+  const m = s.match(/https?:\/\/[^\s　<>"'「」【】（）]+/i);
+  if (!m) return { url: s, title: '' };
+  let title = s.slice(0, m.index).replace(/\s+/g, ' ').trim();
+  if (title.startsWith('【') && title.endsWith('】')) title = title.slice(1, -1).trim(); // 分享文字最外層的【】
+  // 去掉網站名稱後綴：「…-哔哩哔哩」（手機分享）、「…_哔哩哔哩_bilibili」（網頁標題）
+  title = title.replace(/[\s_\-－]*(?:(?:哔哩哔哩|嗶哩嗶哩)(?:[\s_\-－]*bilibili)?|bilibili)$/i, '').trim();
+  return { url: m[0].replace(/[),.;，。；、]+$/, ''), title: [...title].slice(0, 200).join('') };
+}
+
 /** 從 bilibili 影片網址取出 BV 號（bilibili.com/video/BV…，含手機版）。b23.tv 短網址要轉址才知道，這裡認不出來 */
 function extractBilibiliId(url) {
   const host = url.hostname.replace(/^(www|m)\./, '');

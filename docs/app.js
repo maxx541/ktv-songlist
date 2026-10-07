@@ -12,7 +12,9 @@ const S = {
   sessionKnown: false,
   dataReady: false,
   users: new Map(),
-  songs: [],
+  events: [],        // 所有活動
+  allSongs: [],      // 所有活動的歌
+  songs: [],         // 目前參與活動的歌（allSongs 篩出來的，畫面與重複判斷都只看這個）
   dups: new Map(),   // songId -> [{song, level}]
   tab: 'all',
   filter: '',
@@ -101,6 +103,24 @@ function dupText(dups, forUserId) {
   return h('p', { class: `dup ${same ? 'same' : 'similar'}` }, same ? `重複：${who}` : `可能重複：${who}相似的歌`);
 }
 
+// ---------- 活動（篩選層） ----------
+const curEventId = () => S.me?.eventId || '';
+const eventById = (id) => S.events.find((e) => e.id === id) || null;
+const curEvent = () => eventById(curEventId());
+const eventLabel = (e) => [e.name, e.date, e.place].filter(Boolean).join('・');
+
+/** 依目前參與的活動篩出歌，並重算重複（不同活動之間不互相比對） */
+function rescope() {
+  const id = curEventId();
+  S.songs = id ? S.allSongs.filter((s) => (s.eventId || '') === id) : [];
+  S.dups = new Map(S.songs.map((s) => [s.id, findDuplicates(s, S.songs, { excludeId: s.id })]));
+}
+
+/** 日期新的在前；沒有日期的排後面 */
+function sortedEvents() {
+  return [...S.events].sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.createdAt - a.createdAt);
+}
+
 const mySongs = () => S.songs.filter((s) => s.userId === S.me?.id).sort((a, b) => a.order - b.order);
 const otherSongs = () => S.songs.filter((s) => s.userId !== S.me?.id);
 
@@ -151,6 +171,7 @@ function render() {
   $('#tab-all').hidden = S.tab !== 'all';
   $('#tab-mine').hidden = S.tab !== 'mine';
   $('#my-count').textContent = mySongs().length || '';
+  renderEventPicker();
   renderEveryone();
   renderMine();
 }
@@ -165,56 +186,68 @@ function renderUserbox() {
   );
 }
 
+function noEventPrompt() {
+  return h('div', { class: 'empty' },
+    h('p', {}, S.events.length ? '還沒選擇要參與的活動。' : '還沒有任何活動，先建立一個吧。'),
+    h('button', { class: 'btn primary', onclick: () => (S.events.length ? $('#event-select').focus() : openEventDialog()) }, S.events.length ? '選擇活動' : '＋ 新增活動'));
+}
+
 function renderEveryone() {
   const root = $('#people');
   root.replaceChildren();
   const q = S.filter.trim().toLowerCase();
+  const ev = curEvent();
+  if (!ev) {
+    $('#stats').textContent = '';
+    root.append(noEventPrompt());
+    return;
+  }
 
   const byUser = new Map();
   for (const s of [...S.songs].sort((a, b) => a.order - b.order)) {
     if (!byUser.has(s.userId)) byUser.set(s.userId, []);
     byUser.get(s.userId).push(s);
   }
-  const ids = [...byUser.keys()].sort((a, b) => {
+  // 參與這個活動的人（就算還沒點歌也會列出來）
+  const participants = [...S.users.values()].filter((u) => u.eventId === ev.id).map((u) => u.id);
+  const ids = [...new Set([...byUser.keys(), ...participants])].sort((a, b) => {
     if (a === S.me.id) return -1;
     if (b === S.me.id) return 1;
     return nicknameOf(a).localeCompare(nicknameOf(b), 'zh-Hant');
   });
 
   const dupCount = S.songs.filter((s) => S.dups.get(s.id)?.some((d) => d.level === 'same')).length;
-  $('#stats').textContent = S.songs.length
-    ? `${byUser.size} 人、共 ${S.songs.length} 首` + (dupCount ? `，其中 ${dupCount} 首有重複` : '，目前沒有重複')
-    : '';
+  $('#stats').textContent = `${ids.length} 人參與、共 ${S.songs.length} 首`
+    + (S.songs.length ? (dupCount ? `，其中 ${dupCount} 首有重複` : '，目前沒有重複') : '');
 
   let shown = 0;
   for (const uid of ids) {
     const nick = nicknameOf(uid);
-    const songs = byUser.get(uid).filter((s) => {
+    const all = byUser.get(uid) || [];
+    const songs = all.filter((s) => {
       if (S.onlyDup && !S.dups.get(s.id)?.length) return false;
       if (!q) return true;
       return s.title.toLowerCase().includes(q) || nick.toLowerCase().includes(q) || (s.channel || '').toLowerCase().includes(q);
     });
-    if (!songs.length) continue;
-    shown += songs.length;
+    // 還沒點歌的參與者：沒有搜尋或篩選時才列出
+    if (!songs.length && (all.length || q || S.onlyDup)) continue;
+    shown++;
     root.append(h('section', { class: 'person' },
       h('header', { class: 'person-head' },
         avatar(S.users.get(uid), 30),
         h('h3', {}, nick, uid === S.me.id ? h('span', { class: 'you' }, '（你）') : null),
-        h('span', { class: 'muted small' }, `${byUser.get(uid).length} 首`),
+        h('span', { class: 'muted small' }, `${all.length} 首`),
       ),
-      h('div', { class: 'grid' }, songs.map(songCard)),
+      songs.length ? h('div', { class: 'grid' }, songs.map(songCard)) : h('p', { class: 'muted small' }, '還沒點歌'),
     ));
   }
 
   if (!shown) {
-    root.append(h('div', { class: 'empty' },
-      S.songs.length
-        ? h('p', {}, '沒有符合條件的歌。')
-        : [h('p', {}, '還沒有人點歌。'), h('button', { class: 'btn primary', onclick: () => { switchTab('mine'); openAddDialog(); } }, '＋ 加第一首歌')],
-    ));
+    root.append(h('div', { class: 'empty' }, h('p', {}, '沒有符合條件的歌。')));
+  } else if (!S.songs.length) {
+    root.append(h('div', { class: 'empty' }, h('button', { class: 'btn primary', onclick: () => { switchTab('mine'); openAddDialog(); } }, '＋ 加第一首歌')));
   }
 }
-
 function songCard(s) {
   return h('article', { class: 'song-card' },
     thumb(s),
@@ -232,7 +265,7 @@ function renderMine() {
   const songs = mySongs();
   $('#clear-mine').hidden = songs.length === 0;
   if (!songs.length) {
-    list.append(h('li', { class: 'empty' }, h('p', {}, '你還沒有點歌。'), null));
+    list.append(h('li', { class: 'empty' }, h('p', {}, curEvent() ? '你還沒有點歌。' : '請先在上方選擇要參與的活動。')));
     return;
   }
   songs.forEach((s, i) => {
@@ -293,6 +326,11 @@ const add = {
 };
 
 function openAddDialog({ replace = null, source } = {}) {
+  if (!curEvent()) { // 歌一定要存在某個活動裡
+    toast('請先選擇要參與的活動', 'error');
+    if (S.events.length) $('#event-select').focus(); else openEventDialog();
+    return;
+  }
   add.replace = replace;
   add.picker = null;
   add.source = source || (yt.youtubeStatus().authorized ? 'youtube' : (add.source || 'youtube'));
@@ -494,7 +532,7 @@ async function saveItems(items) {
       await store.updateSong(add.replace, { title: it.title, url: it.url || '', channel: it.channel || '', thumb: it.thumb || '' });
       toast('已更換');
     } else {
-      const n = await store.addSongs(items, mySongs());
+      const n = await store.addSongs(items, mySongs(), curEventId());
       toast(`已加入 ${n} 首`);
     }
     $('#add-dialog').close();
@@ -619,6 +657,58 @@ $('#nick-form').addEventListener('submit', async (e) => {
   }
 });
 
+// ---------- 活動選單與活動對話框 ----------
+/** 「我的歌」旁邊的下拉選單：選了就是參與那個活動，之後加的歌都存進去 */
+function renderEventPicker() {
+  const sel = $('#event-select');
+  const ev = curEvent();
+  sel.replaceChildren(
+    ...(ev ? [] : [h('option', { value: '' }, '選擇活動…')]),
+    ...sortedEvents().map((e) => h('option', { value: e.id }, eventLabel(e))),
+    h('option', { value: '__new' }, '＋ 新增活動…'),
+  );
+  sel.value = ev ? ev.id : '';
+  $('#event-edit').hidden = !(ev && ev.createdBy === S.me?.id); // 只有建立者能改
+}
+
+$('#event-select').addEventListener('change', async (e) => {
+  const v = e.target.value;
+  if (v === '__new') { renderEventPicker(); openEventDialog(); return; }
+  if (!v || v === curEventId()) return;
+  try { await store.joinEvent(v); toast('已切換活動'); } catch (err) { toast(err.message, 'error'); renderEventPicker(); }
+});
+
+let eventEditing = null;
+function openEventDialog(ev = null) {
+  eventEditing = ev;
+  const f = $('#event-form');
+  $('#event-title').textContent = ev ? '編輯活動' : '新增活動';
+  $('#event-submit').textContent = ev ? '儲存' : '建立並參與';
+  f.ename.value = ev?.name || '';
+  f.edate.value = ev ? ev.date : new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10); // 新活動預設今天
+  f.eplace.value = ev?.place || '';
+  $('#event-error').hidden = true;
+  $('#event-dialog').showModal();
+  f.ename.focus();
+}
+
+$('#event-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const err = $('#event-error');
+  err.hidden = true;
+  const data = { name: f.ename.value, date: f.edate.value, place: f.eplace.value };
+  try {
+    if (eventEditing) { await store.updateEvent(eventEditing.id, data); toast('已更新活動'); }
+    else { await store.createEvent(data); toast('已建立並參與'); switchTab('mine'); }
+    $('#event-dialog').close();
+  } catch (ex) {
+    err.textContent = ex.message;
+    err.hidden = false;
+  }
+});
+$('#event-edit').addEventListener('click', () => openEventDialog(curEvent()));
+
 // ---------- 登入 ----------
 $('#login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -699,17 +789,20 @@ if (store.configured) {
       stopData?.();
       stopData = null;
       S.dataReady = false;
-      S.songs = [];
+      S.allSongs = [];
+      S.events = [];
       if (user) {
-        stopData = store.watchData(({ users, songs }) => {
+        stopData = store.watchData(({ users, songs, events }) => {
           S.users = users;
-          S.songs = songs;
-          S.dups = new Map(songs.map((s) => [s.id, findDuplicates(s, songs, { excludeId: s.id })]));
+          S.allSongs = songs;
+          S.events = events;
           S.dataReady = true;
+          rescope();
           render();
         }, (err) => { console.error(err); toast('讀取歌單失敗，請重新整理', 'error'); });
       }
     }
+    rescope(); // 參與的活動換了，歌單要跟著換
     if (user && !profile) {
       const form = $('#setup-form');
       if (!form.nickname.value) form.nickname.value = (user.displayName || '').slice(0, 20);

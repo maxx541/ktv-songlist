@@ -1,7 +1,7 @@
 // YouTube：授權（Google Identity Services 權杖用戶端）、讀播放清單、解析貼上的網址
 // 全部在瀏覽器裡直接呼叫 Google API，不需要自己的伺服器。
 import { googleClientId, youtubeApiKey, biliRelayUrl } from './config.js';
-import { extractVideoId, extractPlaylistId, isBilibiliId, videoUrl, normalizePasted } from './shared.js';
+import { extractVideoId, extractPlaylistId, isBilibiliId, videoUrl, parseShared } from './shared.js';
 
 const YT_SCOPE = 'https://www.googleapis.com/auth/youtube.readonly';
 const API = 'https://www.googleapis.com/youtube/v3';
@@ -181,48 +181,58 @@ async function videoInfo(videoId) {
   }
 }
 
-/** 向自己的中繼服務查 bilibili 影片的歌名、上傳者、封面；服務沒開或查不到回傳 null */
-async function biliInfo(bvid) {
+/** 向自己的中繼服務查 bilibili 影片（bvid 或 b23.tv 短網址代碼）：歌名、上傳者、封面、BV 號；服務沒開或查不到回傳 null */
+async function biliInfo({ bvid, short }) {
   if (!biliRelayUrl) return null;
   try {
-    const res = await fetch(`${biliRelayUrl}/?bvid=${encodeURIComponent(bvid)}`, { signal: AbortSignal.timeout(6000) });
+    const q = bvid ? `bvid=${encodeURIComponent(bvid)}` : `short=${encodeURIComponent(short)}`;
+    const res = await fetch(`${biliRelayUrl}/?${q}`, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) return null;
     const body = await res.json();
-    return body?.title ? { title: String(body.title), channel: String(body.channel || ''), thumb: String(body.pic || '') } : null;
+    return body?.title ? { bvid: String(body.bvid || bvid || ''), title: String(body.title), channel: String(body.channel || ''), thumb: String(body.pic || '') } : null;
   } catch {
     return null;
   }
 }
-
 /** 解析貼上的網址：YouTube 影片、YouTube 播放清單，或其他網站連結 */
 export async function resolveUrl(raw) {
+  const shared = parseShared(raw); // 可能是整段分享文字：取出網址，前面的歌名當備案
   let url;
   try {
-    url = new URL(normalizePasted(raw));
+    url = new URL(shared.url);
     if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error();
   } catch {
     throw new YouTubeError('請貼上完整網址（http:// 或 https:// 開頭）');
+  }
+  // b23.tv 短網址：瀏覽器追不到它轉去哪，請中繼服務代查；中繼沒開就只能當一般連結（歌名用分享文字裡的）
+  if (/^(b23\.tv|bili2233\.cn)$/i.test(url.hostname)) {
+    const code = url.pathname.split('/').filter(Boolean)[0] || '';
+    const info = /^[A-Za-z0-9]{5,12}$/.test(code) ? await biliInfo({ short: code }) : null;
+    if (info?.bvid) {
+      return { type: 'video', videoId: info.bvid, url: videoUrl(info.bvid), title: info.title || shared.title, channel: info.channel, thumb: info.thumb };
+    }
+    return { type: 'link', url: url.href, title: shared.title, ...(shared.title ? {} : { warning: '抓不到影片標題，請自己輸入歌名' }) };
   }
   const videoId = extractVideoId(url.href);
   const playlistId = extractPlaylistId(url.href);
   if (videoId && isBilibiliId(videoId)) {
     // 瀏覽器不能直接問 bilibili（CORS），所以問自己的中繼服務；沒開就退回手動輸入
     const p = Number(url.searchParams.get('p'));
-    const info = await biliInfo(videoId);
+    const info = await biliInfo({ bvid: videoId });
     return {
       type: 'video', videoId, url: videoUrl(videoId) + (p > 1 ? `?p=${p}` : ''),
-      title: info?.title || '', channel: info?.channel || '', thumb: info?.thumb || '',
-      ...(info ? {} : { warning: '抓不到影片標題，請自己輸入歌名' }),
+      title: info?.title || shared.title, channel: info?.channel || '', thumb: info?.thumb || '',
+      ...(info || shared.title ? {} : { warning: '抓不到影片標題，請自己輸入歌名' }),
     };
   }
   if (videoId) {
     const info = await videoInfo(videoId);
     return {
       type: 'video', videoId, url: `https://www.youtube.com/watch?v=${videoId}`,
-      title: info?.title || '', channel: info?.channel || '', playlistId,
-      ...(info ? {} : { warning: '抓不到影片標題，請自己輸入歌名' }),
+      title: info?.title || shared.title, channel: info?.channel || '', playlistId,
+      ...(info || shared.title ? {} : { warning: '抓不到影片標題，請自己輸入歌名' }),
     };
   }
   if (playlistId) return { type: 'playlist', playlistId };
-  return { type: 'link', url: url.href };
+  return { type: 'link', url: url.href, title: shared.title };
 }

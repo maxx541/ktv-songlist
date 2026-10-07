@@ -96,12 +96,13 @@ button, input, textarea { font: inherit; color: inherit; }
 /* 表單 */
 .field { display: flex; flex-direction: column; gap: 6px; font-size: .95rem; font-weight: 600; }
 .field small { font-weight: 400; }
-input:not([type]), input[type="text"], input[type="url"], input[type="search"], textarea {
+input:not([type]), input[type="text"], input[type="url"], input[type="search"], input[type="date"], select, textarea {
   width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2);
   font-weight: 400; min-height: 42px;
 }
 textarea { resize: vertical; line-height: 1.6; }
-input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+select { font: inherit; color: inherit; cursor: pointer; text-overflow: ellipsis; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
 ::placeholder { color: #8a8396; }
 .check { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
 .check input { accent-color: var(--accent); }
@@ -133,7 +134,10 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 
 /* 分頁 */
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+/* 「我的歌」旁邊的目前活動下拉選單 */
+.event-pick { display: flex; align-items: center; gap: 6px; margin-left: 12px; flex: 1; min-width: 0; max-width: 520px; padding-bottom: 2px; }
+.event-pick select { min-height: 36px; padding: 6px 10px; flex: 1; min-width: 0; }
 .tab {
   background: none; border: 0; border-bottom: 3px solid transparent; padding: 10px 14px; cursor: pointer;
   font-weight: 600; color: var(--muted); margin-bottom: -1px;
@@ -257,6 +261,7 @@ dialog::backdrop { background: rgb(30 20 45 / .45); }
 
 /* 手機 */
 @media (max-width: 640px) {
+  .event-pick { order: 3; flex: 1 0 100%; max-width: none; margin: 0; padding: 6px 0 8px; }
   .topbar { padding: 10px 16px; }
   .topbar h1 { font-size: 1.05rem; }
   .me-name { max-width: 6em; }

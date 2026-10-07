@@ -16,7 +16,9 @@ const MAX_UPSTREAM_PER_MIN = 20;  // 每分鐘最多問 bilibili 幾次，避免
 // WBI 簽名用的字元重排表（bilibili-API-collect：docs/misc/sign/wbi.md）
 const MIXIN = [46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49, 33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40, 61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11, 36, 20, 34, 44, 52];
 
+const SHORT_RE = /^[A-Za-z0-9]{5,12}$/;
 const cache = new Map();   // bvid -> { value, expiresAt }
+const shortCache = new Map(); // 短網址代碼 -> { bvid, expiresAt }
 let wbiKey = null;         // { value, expiresAt }
 let windowStart = Date.now();
 let windowCount = 0;
@@ -52,7 +54,14 @@ async function signedQuery(params) {
   return `${q}&w_rid=${createHash('md5').update(q + key).digest('hex')}`;
 }
 
-/** 查一支影片；回傳 { title, channel, pic }，影片不存在回傳 null，其他問題丟錯 */
+/** b23.tv 短網址代碼 → BV 號（只看轉址的 Location，不下載內容）；認不出來回傳 null */
+async function resolveShort(code) {
+  const res = await fetch(`https://b23.tv/${code}`, { headers: HEADERS, redirect: 'manual', signal: AbortSignal.timeout(10_000) });
+  const m = (res.headers.get('location') || '').match(/\/video\/(BV1[1-9A-HJ-NP-Za-km-z]{9})/);
+  return m ? m[1] : null;
+}
+
+/** 查一支影片；回傳 { bvid, title, channel, pic }，影片不存在回傳 null，其他問題丟錯 */
 async function lookup(bvid) {
   const body = await getJson(`https://api.bilibili.com/x/web-interface/wbi/view?${await signedQuery({ bvid })}`);
   if ([-404, 62002, 62004, 62012].includes(body.code)) return null;
@@ -61,7 +70,7 @@ async function lookup(bvid) {
     throw new Error(`bilibili 回應 code=${body.code}`);
   }
   const d = body.data;
-  return { title: d.title, channel: d.owner?.name || '', pic: String(d.pic || '').replace(/^http:\/\//, 'https://') };
+  return { bvid, title: d.title, channel: d.owner?.name || '', pic: String(d.pic || '').replace(/^http:\/\//, 'https://') };
 }
 
 function send(res, status, data, origin) {
@@ -84,7 +93,20 @@ const server = http.createServer(async (req, res) => {
   if (req.method !== 'GET') return send(res, 405, { error: 'method' }, origin);
   if (!ALLOWED_ORIGINS.includes(origin)) return send(res, 403, { error: 'forbidden' }, origin);
 
-  const bvid = url.searchParams.get('bvid') || '';
+  // ?bvid=BV…（影片）或 ?short=代碼（b23.tv 短網址，先換成 BV 號再查）
+  const short = url.searchParams.get('short') || '';
+  let bvid = url.searchParams.get('bvid') || '';
+  if (short) {
+    if (!SHORT_RE.test(short)) return send(res, 400, { error: 'bad_short' }, origin);
+    const known = shortCache.get(short);
+    if (known && known.expiresAt > Date.now()) bvid = known.bvid;
+    else {
+      if (!allowUpstream()) return send(res, 429, { error: 'rate_limited' }, origin);
+      try { bvid = (await resolveShort(short)) || ''; } catch (err) { console.error(new Date().toISOString(), short, err.message); return send(res, 502, { error: 'upstream' }, origin); }
+      if (!bvid) return send(res, 404, { error: 'not_found' }, origin);
+      shortCache.set(short, { bvid, expiresAt: Date.now() + OK_TTL });
+    }
+  }
   if (!BVID_RE.test(bvid)) return send(res, 400, { error: 'bad_bvid' }, origin);
 
   const hit = cache.get(bvid);

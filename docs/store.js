@@ -95,6 +95,7 @@ async function claimNickname(user, rawNickname) {
       nicknameKey: key,
       avatar: provider === 'google' && user.photoURL?.startsWith('https://') ? user.photoURL : null,
       provider,
+      eventId: old?.eventId ?? '', // 改暱稱時要保留目前參與的活動
       createdAt: old?.createdAt ?? serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -142,15 +143,24 @@ export function currentEmail() {
 }
 
 // ---------- 歌單資料 ----------
-/** 即時監聽所有人與所有歌；cb({ users: Map, songs: [] }) */
+/** 即時監聽所有人、所有活動與所有歌；cb({ users: Map, songs: [], events: [] }) */
 export function watchData(cb, onError) {
   let users = new Map();
   let songs = [];
+  let events = [];
   let ready = 0;
-  const emit = () => { if (ready >= 2) cb({ users, songs }); };
+  const emit = () => { if (ready >= 3) cb({ users, songs, events }); };
+  const u0 = onSnapshot(collection(db, 'events'), (snap) => {
+    events = snap.docs.map((d) => {
+      const data = d.data({ serverTimestamps: 'estimate' });
+      return { id: d.id, ...data, createdAt: data.createdAt?.toMillis?.() ?? Date.now() };
+    });
+    if (ready < 3) ready++;
+    emit();
+  }, onError);
   const u1 = onSnapshot(collection(db, 'users'), (snap) => {
     users = new Map(snap.docs.map((d) => [d.id, { id: d.id, ...d.data() }]));
-    if (ready < 2) ready++;
+    if (ready < 3) ready++;
     emit();
   }, onError);
   const u2 = onSnapshot(collection(db, 'songs'), (snap) => {
@@ -158,10 +168,10 @@ export function watchData(cb, onError) {
       const data = d.data({ serverTimestamps: 'estimate' });
       return { id: d.id, ...data, createdAt: data.createdAt?.toMillis?.() ?? Date.now() };
     }).sort((a, b) => a.createdAt - b.createdAt);
-    if (ready < 2) ready++;
+    if (ready < 3) ready++;
     emit();
   }, onError);
-  return () => { u1(); u2(); };
+  return () => { u0(); u1(); u2(); };
 }
 
 function cleanText(t, max) {
@@ -191,11 +201,43 @@ export function buildSong(raw) {
   else if (isVideoId(raw.videoId)) videoId = raw.videoId;
   if (!url) url = videoId ? videoUrl(videoId) : youtubeSearchUrl(title);
   const thumb = videoId && isBilibiliId(videoId) && isBilibiliCover(raw.thumb) ? raw.thumb : '';
-  return { title, url, videoId, channel: cleanText(raw.channel, 100), thumb };
+  return { title, url, videoId, channel: cleanText(raw.channel, 100), thumb, eventId: String(raw.eventId ?? '') };
 }
 
-/** 新增多首歌；mine 是自己目前的歌（用來算順序與上限） */
-export const addSongs = wrap(async (items, mine) => {
+// ---------- 活動 ----------
+/** 整理活動欄位；名稱必填，日期要是 YYYY-MM-DD（可空），位置可空 */
+export function cleanEvent(raw) {
+  const name = cleanText(raw.name, 40);
+  if (!name) throw new UserError('請輸入活動名稱');
+  const date = String(raw.date ?? '').trim();
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new UserError('日期格式不正確');
+  return { name, date, place: cleanText(raw.place, 60) };
+}
+
+/** 建立活動並自動參與（同一批寫入）；回傳活動 ID */
+export const createEvent = wrap(async (raw) => {
+  const uid = auth.currentUser.uid;
+  const ref = doc(collection(db, 'events'));
+  const batch = writeBatch(db);
+  batch.set(ref, { ...cleanEvent(raw), createdBy: uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  batch.update(doc(db, 'users', uid), { eventId: ref.id, updatedAt: serverTimestamp() });
+  await batch.commit();
+  return ref.id;
+});
+
+/** 只有建立者能改（規則也會擋） */
+export const updateEvent = wrap(async (eventId, raw) => {
+  await updateDoc(doc(db, 'events', eventId), { ...cleanEvent(raw), updatedAt: serverTimestamp() });
+});
+
+/** 參與某個活動（''＝都不參與）；之後加的歌都會存在這個活動裡 */
+export const joinEvent = wrap(async (eventId) => {
+  await updateDoc(doc(db, 'users', auth.currentUser.uid), { eventId: eventId || '', updatedAt: serverTimestamp() });
+});
+
+/** 新增多首歌到 eventId 這個活動；mine 是自己在這個活動裡的歌（用來算順序與上限） */
+export const addSongs = wrap(async (items, mine, eventId) => {
+  if (!eventId) throw new UserError('請先選擇要參與的活動');
   if (!items.length) throw new UserError('沒有要加入的歌');
   if (mine.length + items.length > MAX_SONGS_PER_USER) {
     throw new UserError(`每人最多 ${MAX_SONGS_PER_USER} 首，你已經有 ${mine.length} 首`);
@@ -205,7 +247,7 @@ export const addSongs = wrap(async (items, mine) => {
   const batch = writeBatch(db);
   for (const raw of items) {
     const ref = doc(collection(db, 'songs'));
-    batch.set(ref, { userId: uid, ...buildSong(raw), order: ++order, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    batch.set(ref, { userId: uid, ...buildSong({ ...raw, eventId }), order: ++order, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
   }
   await batch.commit();
   return items.length;
@@ -221,6 +263,7 @@ export const updateSong = wrap(async (song, fields) => {
     channel: hasUrl ? (fields.channel ?? '') : song.channel,
     // 沒換影片就沿用原本的封面；換成別支影片時，由呼叫端帶新的 thumb
     thumb: fields.thumb ?? (!hasUrl || extractVideoId(fields.url) === song.videoId ? song.thumb : ''),
+    eventId: song.eventId ?? '', // 歌留在原本的活動
   });
   await updateDoc(doc(db, 'songs', song.id), { ...next, updatedAt: serverTimestamp() });
 });

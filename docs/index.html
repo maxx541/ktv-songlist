@@ -10,8 +10,8 @@
   <title>MakoSing</title>
   <link rel="icon" type="image/png" href="img/favicon.png">
   <link rel="apple-touch-icon" href="img/logo.png">
-  <link rel="stylesheet" href="style.css?v=20261007c">
-  <script type="module" src="app.js?v=20261007c"></script>
+  <link rel="stylesheet" href="style.css?v=20261007d">
+  <script type="module" src="app.js?v=20261007d"></script>
 </head>
 <body>
   <div id="inapp-banner" class="banner" hidden>
@@ -75,6 +75,11 @@
       <nav class="tabs" role="tablist">
         <button class="tab" role="tab" data-tab="all">大家的歌</button>
         <button class="tab" role="tab" data-tab="mine">我的歌 <span id="my-count" class="count"></span></button>
+        <div class="event-pick">
+          <label class="muted small" for="event-select">活動</label>
+          <select id="event-select" aria-label="目前參與的活動"></select>
+          <button id="event-edit" class="icon-btn" type="button" title="編輯這個活動" aria-label="編輯這個活動" hidden><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></button>
+        </div>
       </nav>
 
       <div id="tab-all" class="tabpanel">
@@ -129,6 +134,26 @@
       <div class="sheet-foot">
         <button type="button" class="btn ghost" data-close>取消</button>
         <button type="submit" class="btn primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 新增／編輯活動 -->
+  <dialog id="event-dialog" class="sheet small">
+    <form id="event-form" method="dialog">
+      <div class="sheet-head">
+        <h2 id="event-title">新增活動</h2>
+        <button class="icon-btn" type="button" data-close aria-label="關閉"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-body stack">
+        <label class="field"><span>活動名稱</span><input name="ename" maxlength="40" required autocomplete="off"></label>
+        <label class="field"><span>日期</span><input name="edate" type="date"></label>
+        <label class="field"><span>位置</span><input name="eplace" maxlength="60" autocomplete="off"></label>
+        <p id="event-error" class="error" hidden></p>
+      </div>
+      <div class="sheet-foot">
+        <button type="button" class="btn ghost" data-close>取消</button>
+        <button id="event-submit" type="submit" class="btn primary">建立並參與</button>
       </div>
     </form>
   </dialog>

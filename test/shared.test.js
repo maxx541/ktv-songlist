@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractVideoId, extractPlaylistId, normalizeTitle, findDuplicates, cleanNickname, isVideoId, videoUrl, thumbnailFor, normalizePasted, embedUrl, isBilibiliCover } from '../docs/shared.js';
+import { extractVideoId, extractPlaylistId, normalizeTitle, findDuplicates, cleanNickname, isVideoId, videoUrl, thumbnailFor, normalizePasted, parseShared, embedUrl, isBilibiliCover } from '../docs/shared.js';
 
 test('extractVideoId 支援各種 YouTube 網址', () => {
   const id = 'DYptgVvkVLQ';
@@ -63,6 +63,29 @@ test('normalizePasted：嵌入代碼換回影片網址', () => {
   assert.equal(normalizePasted('  https://youtu.be/DYptgVvkVLQ '), 'https://youtu.be/DYptgVvkVLQ');
   assert.equal(normalizePasted('<iframe src="https://evil.example/x"></iframe>'), '<iframe src="https://evil.example/x"></iframe>');
   assert.equal(normalizePasted(null), '');
+});
+
+test('parseShared：分享文字取出網址與備用歌名', () => {
+  // bilibili 分享（歌名被最外層【】包住，裡面還有自己的【】）
+  const share = '【【纯k投屏】「IF*Else」——mochari ディメンション凸ラバース!!  ED】 https://www.bilibili.com/video/BV1Va9yBmEfH/?share_source=copy_web';
+  const r = parseShared(share);
+  assert.equal(r.url, 'https://www.bilibili.com/video/BV1Va9yBmEfH/?share_source=copy_web');
+  assert.equal(r.title, '【纯k投屏】「IF*Else」——mochari ディメンション凸ラバース!! ED');
+  assert.equal(extractVideoId(r.url), 'BV1Va9yBmEfH');
+  // 手機分享：標題尾巴是「-哔哩哔哩」，網址是 b23.tv 短網址
+  const mobile = parseShared('【【纯k投屏】「IF*Else」——mochari ディメンション凸ラバース!!  ED-哔哩哔哩】 https://b23.tv/Ck414WP');
+  assert.equal(mobile.url, 'https://b23.tv/Ck414WP');
+  assert.equal(mobile.title, '【纯k投屏】「IF*Else」——mochari ディメンション凸ラバース!! ED');
+  // 只有網址：沒有備用歌名
+  assert.deepEqual(parseShared('https://youtu.be/DYptgVvkVLQ'), { url: 'https://youtu.be/DYptgVvkVLQ', title: '' });
+  // 一般「歌名 網址」；網址後面緊接中文標點時不要吃進去
+  assert.deepEqual(parseShared('告白氣球 https://youtu.be/DYptgVvkVLQ。'), { url: 'https://youtu.be/DYptgVvkVLQ', title: '告白氣球' });
+  // 標題末尾的網站名稱要去掉
+  assert.equal(parseShared('某首歌_哔哩哔哩_bilibili https://www.bilibili.com/video/BV1Va9yBmEfH').title, '某首歌');
+  // 嵌入代碼照舊可用
+  assert.equal(parseShared('<iframe src="//player.bilibili.com/player.html?bvid=BV1Uppw6yEMr&p=1"></iframe>').url, 'https://www.bilibili.com/video/BV1Uppw6yEMr');
+  // 沒有網址：原樣回傳
+  assert.deepEqual(parseShared('隨便打字'), { url: '隨便打字', title: '' });
 });
 
 test('embedUrl 只給 bilibili', () => {
