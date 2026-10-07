@@ -2,5 +2,5 @@ node_modules/
 
 # 去背前的原圖與 logo 原檔（網站只用 docs/img 裡處理過的）
 立繪/
-logo.png
+/logo.png
 .claude/
