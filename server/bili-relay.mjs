@@ -76,7 +76,9 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname === '/health') return send(res, 200, { ok: true }, origin);
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, { ...(ALLOWED_ORIGINS.includes(origin) ? { 'Access-Control-Allow-Origin': origin } : {}), 'Access-Control-Allow-Methods': 'GET', Vary: 'Origin' });
+    // Access-Control-Allow-Private-Network：這台電腦上的瀏覽器會把網址解析成 Tailscale 內網位址，
+    // Chrome 對「公開網站 → 私有位址」會先送預檢，要有這個標頭才放行
+    res.writeHead(204, { ...(ALLOWED_ORIGINS.includes(origin) ? { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Private-Network': 'true' } : {}), 'Access-Control-Allow-Methods': 'GET', Vary: 'Origin' });
     return res.end();
   }
   if (req.method !== 'GET') return send(res, 405, { error: 'method' }, origin);
