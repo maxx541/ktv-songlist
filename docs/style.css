@@ -195,7 +195,7 @@ dialog::backdrop { background: rgb(0 0 0 / .6); }
 .block h3 { font-size: 1rem; }
 .connect { padding: 16px; border: 1px dashed var(--border); border-radius: var(--radius); }
 
-.pl-list, .pick-list, .text-preview { list-style: none; margin: 0; padding: 0; }
+.pl-list, .pick-list { list-style: none; margin: 0; padding: 0; }
 .pl-list { display: flex; flex-direction: column; gap: 8px; }
 .pl-item {
   width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; cursor: pointer;
@@ -227,8 +227,6 @@ dialog::backdrop { background: rgb(0 0 0 / .6); }
 .link-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); }
 .link-card .meta { flex: 1; min-width: 0; }
 .row-end { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-.text-preview { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; }
-.text-preview li { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .edit-preview .thumb.sm { width: 160px; }
 
 /* 提示 */

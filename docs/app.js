@@ -1,5 +1,5 @@
 // KTV 點歌整理 — 前端畫面
-import { extractVideoId, thumbnailFor, findDuplicates, youtubeSearchUrl, embedUrl, normalizePasted } from './shared.js';
+import { extractVideoId, thumbnailFor, findDuplicates, youtubeSearchUrl, embedUrl } from './shared.js';
 import * as store from './store.js';
 import * as yt from './youtube.js';
 
@@ -206,7 +206,7 @@ function renderMine() {
   const songs = mySongs();
   $('#clear-mine').hidden = songs.length === 0;
   if (!songs.length) {
-    list.append(h('li', { class: 'empty' }, h('p', {}, '你還沒有點歌。'), h('p', { class: 'muted small' }, '按「＋ 加歌」，可以從 YouTube 歌單挑、貼連結，或直接打歌名。')));
+    list.append(h('li', { class: 'empty' }, h('p', {}, '你還沒有點歌。'), null));
     return;
   }
   songs.forEach((s, i) => {
@@ -270,9 +270,7 @@ function openAddDialog({ replace = null, source } = {}) {
   add.replace = replace;
   add.picker = null;
   add.source = source || (yt.youtubeStatus().authorized ? 'youtube' : (add.source || 'youtube'));
-  if (replace && add.source === 'text') add.source = 'link';
   $('#add-title').textContent = replace ? `更換：${replace.title}` : '加歌';
-  $('#source-tabs [data-source="text"]').hidden = Boolean(replace);
   const dlg = $('#add-dialog');
   if (!dlg.open) dlg.showModal();
   yt.preloadAuth().catch(() => {});
@@ -295,9 +293,8 @@ function renderAddBody() {
   foot.hidden = true;
   body.scrollTop = 0;
   if (add.picker) return renderPicker(body, foot);
-  if (add.source === 'youtube') return renderYouTubeSource(body);
   if (add.source === 'link') return renderLinkSource(body);
-  return renderTextSource(body, foot);
+  return renderYouTubeSource(body);
 }
 
 function playlistUrlForm(body) {
@@ -311,7 +308,7 @@ function playlistUrlForm(body) {
       else toast('這不是播放清單網址，請改用「貼上連結」', 'error');
     } catch (err) { toast(err.message, 'error'); }
   } }, input, h('button', { class: 'btn', type: 'submit' }, '載入'));
-  body.append(h('div', { class: 'block' }, h('h3', {}, '用播放清單網址匯入'), h('p', { class: 'muted small' }, '公開或「不公開」的 YouTube 播放清單都可以。'), form));
+  body.append(h('div', { class: 'block' }, h('h3', {}, '用播放清單網址匯入'), form));
 }
 
 async function connectYouTube() {
@@ -327,10 +324,9 @@ async function renderYouTubeSource(body) {
   if (!st.authorized) {
     body.append(h('div', { class: 'block connect' },
       h('h3', {}, '從你的 YouTube 播放清單挑歌'),
-      h('p', { class: 'muted' }, '連結 Google 帳號後，會列出你的播放清單和「喜歡的影片」，勾選想唱的歌就能加入。只會讀取，不會改動你的 YouTube。'),
       st.canAuthorize
         ? h('button', { class: 'btn google', onclick: connectYouTube }, '連結 Google／YouTube 帳號')
-        : h('p', { class: 'warn small' }, '網站還沒設定 YouTube 讀取權限（config.js 的 googleClientId），可以先用「貼上連結」或「文字清單」。'),
+        : h('p', { class: 'warn small' }, '尚未設定 YouTube 讀取權限，請改用「貼上連結」。'),
     ));
     if (st.apiKey) playlistUrlForm(body);
     return;
@@ -497,7 +493,6 @@ function renderLinkSource(body) {
   } }, input, h('button', { class: 'btn', type: 'submit' }, '解析'));
   body.append(h('div', { class: 'block' },
     h('h3', {}, add.replace ? '貼上新歌的連結' : '貼上連結'),
-    h('p', { class: 'muted small' }, 'YouTube 會自動抓歌名和縮圖。bilibili 可以貼網址或「嵌入代碼」，會顯示播放器讓你對著抄歌名（網站讀不到 bilibili 的標題），同一支影片一樣會標「重複」。KKBOX、Spotify 等其他網站也請自己輸入歌名。b23.tv 短網址請先在瀏覽器打開，複製完整網址再貼。'),
     form, result));
   setTimeout(() => input.focus(), 50);
 }
@@ -532,56 +527,6 @@ function showLinkResult(box, r) {
   );
   updateChips();
   if (!r.title) titleInput.focus();
-}
-
-function renderTextSource(body, foot) {
-  const ta = h('textarea', { rows: 8, placeholder: '一行一首，例如：\n告白氣球\n晴天 | https://www.youtube.com/watch?v=DYptgVvkVLQ\nhttps://youtu.be/T4SimnaiktU', 'aria-label': '歌曲清單' });
-  const preview = h('ul', { class: 'text-preview' });
-  const submit = h('button', { class: 'btn primary', disabled: true }, '加入');
-  let parsed = [];
-
-  const parse = () => ta.value.split(/\r?\n/).map((l) => normalizePasted(l)).filter(Boolean).slice(0, 100).map((line) => {
-    if (/^https?:\/\/\S+$/i.test(line)) return { title: '', url: line, needsResolve: true };
-    const [title, url] = line.split(/\s*[|｜]\s*/);
-    return { title: title.slice(0, 200), url: (url || '').trim(), videoId: extractVideoId(url || '') };
-  });
-
-  const draw = () => {
-    parsed = parse();
-    preview.replaceChildren(...parsed.map((it) => h('li', {},
-      h('span', {}, it.title || it.url),
-      it.needsResolve ? h('span', { class: 'muted small' }, '（加入時自動抓歌名）') : h('span', { class: 'chips' }, statusChips(itemStatus(it))),
-    )));
-    submit.disabled = !parsed.length;
-    submit.textContent = parsed.length ? `加入 ${parsed.length} 首` : '加入';
-  };
-  ta.addEventListener('input', draw);
-
-  submit.addEventListener('click', async () => {
-    submit.disabled = true;
-    submit.textContent = '處理中…';
-    const items = [];
-    for (const it of parsed) {
-      if (!it.needsResolve) { items.push({ title: it.title, url: it.url, channel: '' }); continue; }
-      try {
-        const r = await yt.resolveUrl(it.url);
-        items.push({ title: r.title || hostOf(it.url) || it.url, url: r.url || it.url, channel: r.channel || '' });
-      } catch {
-        items.push({ title: hostOf(it.url) || it.url, url: it.url, channel: '' });
-      }
-    }
-    for (const it of items) it.videoId = extractVideoId(it.url);
-    await saveItems(items);
-    draw();
-  });
-
-  body.append(h('div', { class: 'block' },
-    h('h3', {}, '文字清單'),
-    h('p', { class: 'muted small' }, '從其他地方複製歌單貼上。只寫歌名的話，會自動產生 YouTube 搜尋連結。'),
-    ta, preview));
-  foot.hidden = false;
-  foot.append(h('span', { class: 'spacer' }), submit);
-  setTimeout(() => ta.focus(), 50);
 }
 
 // ---------- 編輯對話框 ----------
