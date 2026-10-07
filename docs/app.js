@@ -124,15 +124,16 @@ function sortedEvents() {
 const mySongs = () => S.songs.filter((s) => s.userId === S.me?.id).sort((a, b) => a.order - b.order);
 const otherSongs = () => S.songs.filter((s) => s.userId !== S.me?.id);
 
-// ---------- 畫面 ----------
+// ---------- 立繪（登入頁一位、登入後在「大家的歌」最底下沿用同一位）----------
 let tachieShown = false;
-let voiceEls = [];      // 目前這個立繪的語音（預先載入，點的時候才不會延遲）
+let tachieNow = null;   // { t, side }：目前抽到的角色與位置（左下／右下角）
+let voiceEls = [];      // 這位角色的語音（預先載入，點的時候才不會延遲）
 let voiceNow = null;    // 正在播的那一句
 let voiceLast = -1;
 
 /** 點立繪：彈跳動畫；有語音的角色再隨機播一句（不會連續兩次同一句，新的一句會蓋掉還沒播完的） */
-function onTachieClick() {
-  const img = $('#tachie-img');
+function onTachieClick(e) {
+  const img = e.currentTarget;
   img.classList.remove('bounce');
   void img.offsetWidth;                    // 強制重算版面，連續點擊動畫才會重新開始
   img.classList.add('bounce');
@@ -145,12 +146,13 @@ function onTachieClick() {
   voiceNow.currentTime = 0;
   voiceNow.play().catch(() => { /* 瀏覽器不讓播（例如靜音模式）就算了，動畫照樣有 */ });
 }
-$('#tachie-img').addEventListener('click', onTachieClick);
-$('#tachie-img').addEventListener('animationend', (e) => e.currentTarget.classList.remove('bounce'));
-/** 登入頁每次出現都隨機換一張立繪（不和上一張重複）；載入失敗就整個隱藏，不影響登入 */
-function pickTachie() {
-  const box = $('#tachie');
-  const img = $('#tachie-img');
+for (const img of document.querySelectorAll('#tachie-img, #tachie-foot-img')) {
+  img.addEventListener('click', onTachieClick);
+  img.addEventListener('animationend', (e) => e.currentTarget.classList.remove('bounce'));
+}
+
+/** 隨機抽一位角色（不和上一次重複）與左／右下角，並預先載入語音 */
+function chooseTachie() {
   if (!tachie.length) return;
   let last = -1;
   try { const saved = localStorage.getItem('ktv-tachie'); if (saved !== null) last = Number(saved); } catch { /* ignore */ }
@@ -158,11 +160,18 @@ function pickTachie() {
   do { i = Math.floor(Math.random() * tachie.length); } while (tachie.length > 1 && i === last);
   try { localStorage.setItem('ktv-tachie', String(i)); } catch { /* ignore */ }
   const t = tachie[i];
+  tachieNow = { t, side: Math.random() < 0.5 ? 'left' : 'right' };
   voiceNow?.pause();
   voiceLast = -1;
   voiceEls = (t.voices || []).map((src) => { const a = new Audio(src); a.preload = 'auto'; return a; });
-  box.classList.remove('ready');
-  box.dataset.side = Math.random() < 0.5 ? 'left' : 'right'; // 左下角或右下角
+}
+
+/** 把目前抽到的角色畫到某個容器；載入失敗就整個隱藏，不影響其他功能 */
+function paintTachie(box, img, { fade = false } = {}) {
+  if (!tachieNow) return;
+  const { t, side } = tachieNow;
+  if (fade) box.classList.remove('ready');
+  box.dataset.side = side;
   box.style.setProperty('--cap', t.maxH ? `${t.maxH}px` : '9999px'); // 原圖很小的，限制顯示高度避免放大變糊
   img.width = t.w;
   img.height = t.h;
@@ -172,13 +181,28 @@ function pickTachie() {
   img.src = t.src;
 }
 
+/** 登入頁每次出現都重新抽一位 */
+function pickTachie() {
+  chooseTachie();
+  paintTachie($('#tachie'), $('#tachie-img'), { fade: true });
+}
+
+/** 登入後，在「大家的歌」捲到最底下的左／右下角放同一位；其他畫面不顯示 */
+function renderTachieFoot(show) {
+  const foot = $('#tachie-foot');
+  if (!show || !tachie.length) { foot.hidden = true; return; }
+  if (!tachieNow) chooseTachie();            // 直接用既有的登入狀態進來（沒看過登入頁）時，現在才抽
+  const key = `${tachieNow.t.src}|${tachieNow.side}`;
+  if (foot.dataset.key !== key) { foot.dataset.key = key; paintTachie(foot, $('#tachie-foot-img')); } else foot.hidden = false;
+}
+
 function showView(id) {
   for (const v of ['unconfigured-view', 'login-view', 'setup-view', 'main-view']) $(`#${v}`).hidden = v !== id;
   $('#loading').hidden = Boolean(id);
+  if (id !== 'main-view') renderTachieFoot(false);
   if (id === 'login-view' && !tachieShown) pickTachie();
   tachieShown = id === 'login-view';
 }
-
 function render() {
   renderUserbox();
   if (!store.configured) return showView('unconfigured-view');
@@ -194,6 +218,7 @@ function render() {
   }
   $('#tab-all').hidden = S.tab !== 'all';
   $('#tab-mine').hidden = S.tab !== 'mine';
+  renderTachieFoot(S.tab === 'all');
   $('#my-count').textContent = mySongs().length || '';
   renderEventPicker();
   renderEveryone();

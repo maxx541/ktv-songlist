@@ -125,9 +125,15 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   max-width: calc((100vw - 440px) / 2 + 48px); /* 不超過登入卡兩側的空間（最多讓出 48px 疊在卡片後面） */
 }
 .tachie:not(.ready) { visibility: hidden; }
+/* 登入後「大家的歌」最底下：同一位立繪站在視窗左下或右下角（頁面比螢幕短的時候，也會貼在螢幕底部） */
+.tachie-foot { display: flex; pointer-events: none; margin-top: 8px; }
+.tachie-foot[data-side="left"] { justify-content: flex-start; }
+.tachie-foot[data-side="right"] { justify-content: flex-end; }
+.tachie-foot img { display: block; width: auto; height: min(42vh, 440px, var(--cap, 9999px)); max-width: 55vw; object-fit: contain; }
+@media (max-width: 859px) { .tachie-foot img { height: min(26vh, 240px, var(--cap, 9999px)); max-width: 60vw; } }
 /* 立繪可以點：彈跳一下（腳底為軸心，有一點壓扁與拉長），有語音的角色同時播一句 */
-.tachie img { pointer-events: auto; cursor: pointer; transform-origin: 50% 100%; -webkit-tap-highlight-color: transparent; -webkit-user-drag: none; }
-.tachie img.bounce { animation: tachie-bounce .6s cubic-bezier(.28, .84, .42, 1); }
+.tachie img, .tachie-foot img { pointer-events: auto; cursor: pointer; transform-origin: 50% 100%; -webkit-tap-highlight-color: transparent; -webkit-user-drag: none; }
+.tachie img.bounce, .tachie-foot img.bounce { animation: tachie-bounce .6s cubic-bezier(.28, .84, .42, 1); }
 @keyframes tachie-bounce {
   0%   { transform: scale(1, 1); }
   16%  { transform: scale(1.08, .88); }
@@ -136,7 +142,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   80%  { transform: scale(.99, 1.02); }
   100% { transform: scale(1, 1); }
 }
-@media (prefers-reduced-motion: reduce) { .tachie img.bounce { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .tachie img.bounce, .tachie-foot img.bounce { animation: none; } }
 @media (max-width: 859px) {
   /* 手機：立繪縮小，貼在螢幕下方角落，卡片疊在它前面 */
   .tachie img { max-height: min(22vh, 190px, var(--cap, 9999px)); max-width: 40vw; }
