@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractVideoId, extractPlaylistId, normalizeTitle, findDuplicates, cleanNickname, isVideoId, videoUrl, thumbnailFor } from '../docs/shared.js';
+import { extractVideoId, extractPlaylistId, normalizeTitle, findDuplicates, cleanNickname, isVideoId, videoUrl, thumbnailFor, normalizePasted, embedUrl } from '../docs/shared.js';
 
 test('extractVideoId 支援各種 YouTube 網址', () => {
   const id = 'DYptgVvkVLQ';
@@ -46,6 +46,24 @@ test('isVideoId、videoUrl、thumbnailFor 同時處理 YouTube 與 bilibili', ()
 test('findDuplicates：同一支 bilibili 影片算重複', () => {
   const songs = [{ id: '1', userId: 'a', title: '某首歌', videoId: 'BV1GJ411x7h7' }];
   assert.deepEqual(findDuplicates({ title: '完全不同', videoId: 'BV1GJ411x7h7' }, songs).map((d) => d.level), ['same']);
+});
+
+test('normalizePasted：嵌入代碼換回影片網址', () => {
+  const bili = '<iframe src="//player.bilibili.com/player.html?isOutside=true&aid=117393753899831&bvid=BV1Uppw6yEMr&cid=42513074607&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>';
+  assert.equal(normalizePasted(bili), 'https://www.bilibili.com/video/BV1Uppw6yEMr');
+  assert.equal(extractVideoId(normalizePasted(bili)), 'BV1Uppw6yEMr');
+  assert.equal(normalizePasted(bili.replace('p=1', 'p=3')), 'https://www.bilibili.com/video/BV1Uppw6yEMr?p=3');
+  assert.equal(normalizePasted('<iframe width="560" src="https://www.youtube.com/embed/DYptgVvkVLQ?si=x"></iframe>'), 'https://www.youtube.com/watch?v=DYptgVvkVLQ');
+  // 不是 iframe、或不認得的網站：原樣（去頭尾空白）
+  assert.equal(normalizePasted('  https://youtu.be/DYptgVvkVLQ '), 'https://youtu.be/DYptgVvkVLQ');
+  assert.equal(normalizePasted('<iframe src="https://evil.example/x"></iframe>'), '<iframe src="https://evil.example/x"></iframe>');
+  assert.equal(normalizePasted(null), '');
+});
+
+test('embedUrl 只給 bilibili', () => {
+  assert.match(embedUrl('BV1Uppw6yEMr'), /^https:\/\/player\.bilibili\.com\/player\.html\?.*bvid=BV1Uppw6yEMr.*autoplay=0/);
+  assert.equal(embedUrl('DYptgVvkVLQ'), null);
+  assert.equal(embedUrl(null), null);
 });
 
 test('extractPlaylistId', () => {

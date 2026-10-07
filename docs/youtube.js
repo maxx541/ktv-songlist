@@ -1,7 +1,7 @@
 // YouTube：授權（Google Identity Services 權杖用戶端）、讀播放清單、解析貼上的網址
 // 全部在瀏覽器裡直接呼叫 Google API，不需要自己的伺服器。
 import { googleClientId, youtubeApiKey } from './config.js';
-import { extractVideoId, extractPlaylistId, isBilibiliId, videoUrl } from './shared.js';
+import { extractVideoId, extractPlaylistId, isBilibiliId, videoUrl, normalizePasted } from './shared.js';
 
 const YT_SCOPE = 'https://www.googleapis.com/auth/youtube.readonly';
 const API = 'https://www.googleapis.com/youtube/v3';
@@ -185,7 +185,7 @@ async function videoInfo(videoId) {
 export async function resolveUrl(raw) {
   let url;
   try {
-    url = new URL(String(raw).trim());
+    url = new URL(normalizePasted(raw));
     if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error();
   } catch {
     throw new YouTubeError('請貼上完整網址（http:// 或 https:// 開頭）');

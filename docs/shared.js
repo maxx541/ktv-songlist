@@ -18,6 +18,37 @@ export function videoUrl(videoId) {
     : `https://www.youtube.com/watch?v=${videoId}`;
 }
 
+/** 內嵌播放器網址（目前只有 bilibili；YouTube 用縮圖就好）。不會自動播放 */
+export function embedUrl(videoId) {
+  return isBilibiliId(videoId)
+    ? `https://player.bilibili.com/player.html?isOutside=true&bvid=${videoId}&p=1&autoplay=0&high_quality=1`
+    : null;
+}
+
+/**
+ * 使用者可能貼的是網站提供的「嵌入代碼」（<iframe src="...">），這裡把它換回一般影片網址。
+ * 不是 iframe 就原樣回傳。支援 bilibili 播放器（player.bilibili.com，含 p 分P）與 YouTube embed。
+ */
+export function normalizePasted(input) {
+  const s = String(input ?? '').trim();
+  const src = s.match(/<iframe[^>]+src\s*=\s*["']([^"']+)["']/i)?.[1];
+  if (!src) return s;
+  let url;
+  try { url = new URL(src.replace(/&amp;/g, '&').replace(/^\/\//, 'https://')); } catch { return s; }
+  const host = url.hostname.replace(/^www\./, '');
+  if (host === 'player.bilibili.com') {
+    const bvid = url.searchParams.get('bvid') || '';
+    if (!BILIBILI_ID_RE.test(bvid)) return s;
+    const p = Number(url.searchParams.get('p'));
+    return videoUrl(bvid) + (p > 1 ? `?p=${p}` : '');
+  }
+  if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+    const m = url.pathname.match(/^\/embed\/([\w-]{11})/);
+    if (m) return `https://www.youtube.com/watch?v=${m[1]}`;
+  }
+  return s;
+}
+
 /** 從 bilibili 影片網址取出 BV 號（bilibili.com/video/BV…，含手機版）。b23.tv 短網址要轉址才知道，這裡認不出來 */
 function extractBilibiliId(url) {
   const host = url.hostname.replace(/^(www|m)\./, '');

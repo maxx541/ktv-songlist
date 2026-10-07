@@ -1,5 +1,5 @@
 // KTV 點歌整理 — 前端畫面
-import { extractVideoId, thumbnailFor, findDuplicates, youtubeSearchUrl } from './shared.js';
+import { extractVideoId, thumbnailFor, findDuplicates, youtubeSearchUrl, embedUrl, normalizePasted } from './shared.js';
 import * as store from './store.js';
 import * as yt from './youtube.js';
 
@@ -481,7 +481,8 @@ async function saveItems(items) {
 }
 
 function renderLinkSource(body) {
-  const input = h('input', { type: 'url', inputmode: 'url', required: true, placeholder: '貼上 YouTube 影片／播放清單，或任何網址', 'aria-label': '網址' });
+  // type 用 text 而不是 url：要讓人也能貼「嵌入代碼」（<iframe ...>）
+  const input = h('input', { type: 'text', inputmode: 'url', required: true, autocomplete: 'off', placeholder: '貼上 YouTube／bilibili 網址、播放清單，或嵌入代碼', 'aria-label': '網址或嵌入代碼' });
   const result = h('div', { class: 'link-result' });
   const form = h('form', { class: 'inline-form', onsubmit: async (e) => {
     e.preventDefault();
@@ -496,7 +497,7 @@ function renderLinkSource(body) {
   } }, input, h('button', { class: 'btn', type: 'submit' }, '解析'));
   body.append(h('div', { class: 'block' },
     h('h3', {}, add.replace ? '貼上新歌的連結' : '貼上連結'),
-    h('p', { class: 'muted small' }, 'YouTube 會自動抓歌名和縮圖；bilibili（bilibili.com/video/BV…）和其他網站（KKBOX、Spotify…）請自己輸入歌名，bilibili 同一支影片一樣會標「重複」。b23.tv 短網址請先在瀏覽器打開，複製完整網址再貼。'),
+    h('p', { class: 'muted small' }, 'YouTube 會自動抓歌名和縮圖。bilibili 可以貼網址或「嵌入代碼」，會顯示播放器讓你對著抄歌名（網站讀不到 bilibili 的標題），同一支影片一樣會標「重複」。KKBOX、Spotify 等其他網站也請自己輸入歌名。b23.tv 短網址請先在瀏覽器打開，複製完整網址再貼。'),
     form, result));
   setTimeout(() => input.focus(), 50);
 }
@@ -517,6 +518,10 @@ function showLinkResult(box, r) {
         chips,
       ),
     ),
+    embedUrl(r.videoId)
+      ? h('div', { class: 'embed-player' },
+        h('iframe', { src: embedUrl(r.videoId), title: 'bilibili 播放器', loading: 'lazy', scrolling: 'no', frameborder: 'no', allowfullscreen: 'true', referrerpolicy: 'no-referrer-when-downgrade', allow: 'fullscreen' }))
+      : null,
     h('div', { class: 'row-end' },
       r.playlistId ? h('button', { class: 'btn ghost', onclick: () => openPicker(r.playlistId) }, '改成匯入整個播放清單') : null,
       h('button', { class: 'btn primary', onclick: () => {
@@ -535,7 +540,7 @@ function renderTextSource(body, foot) {
   const submit = h('button', { class: 'btn primary', disabled: true }, '加入');
   let parsed = [];
 
-  const parse = () => ta.value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, 100).map((line) => {
+  const parse = () => ta.value.split(/\r?\n/).map((l) => normalizePasted(l)).filter(Boolean).slice(0, 100).map((line) => {
     if (/^https?:\/\/\S+$/i.test(line)) return { title: '', url: line, needsResolve: true };
     const [title, url] = line.split(/\s*[|｜]\s*/);
     return { title: title.slice(0, 200), url: (url || '').trim(), videoId: extractVideoId(url || '') };
