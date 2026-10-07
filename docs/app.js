@@ -208,44 +208,45 @@ function renderEveryone() {
     if (!byUser.has(s.userId)) byUser.set(s.userId, []);
     byUser.get(s.userId).push(s);
   }
-  // 參與這個活動的人（就算還沒點歌也會列出來）
-  const participants = [...S.users.values()].filter((u) => u.eventId === ev.id).map((u) => u.id);
-  const ids = [...new Set([...byUser.keys(), ...participants])].sort((a, b) => {
+  // 只列出「已經點了歌」的人；進來看看、還沒點歌的人不顯示
+  const ids = [...byUser.keys()].sort((a, b) => {
     if (a === S.me.id) return -1;
     if (b === S.me.id) return 1;
     return nicknameOf(a).localeCompare(nicknameOf(b), 'zh-Hant');
   });
 
   const dupCount = S.songs.filter((s) => S.dups.get(s.id)?.some((d) => d.level === 'same')).length;
-  $('#stats').textContent = `${ids.length} 人參與、共 ${S.songs.length} 首`
-    + (S.songs.length ? (dupCount ? `，其中 ${dupCount} 首有重複` : '，目前沒有重複') : '');
+  $('#stats').textContent = S.songs.length
+    ? `${ids.length} 人點歌、共 ${S.songs.length} 首` + (dupCount ? `，其中 ${dupCount} 首有重複` : '，目前沒有重複')
+    : '';
 
   let shown = 0;
   for (const uid of ids) {
     const nick = nicknameOf(uid);
-    const all = byUser.get(uid) || [];
+    const all = byUser.get(uid);
     const songs = all.filter((s) => {
       if (S.onlyDup && !S.dups.get(s.id)?.length) return false;
       if (!q) return true;
       return s.title.toLowerCase().includes(q) || nick.toLowerCase().includes(q) || (s.channel || '').toLowerCase().includes(q);
     });
-    // 還沒點歌的參與者：沒有搜尋或篩選時才列出
-    if (!songs.length && (all.length || q || S.onlyDup)) continue;
-    shown++;
+    if (!songs.length) continue;
+    shown += songs.length;
     root.append(h('section', { class: 'person' },
       h('header', { class: 'person-head' },
         avatar(S.users.get(uid), 30),
         h('h3', {}, nick, uid === S.me.id ? h('span', { class: 'you' }, '（你）') : null),
         h('span', { class: 'muted small' }, `${all.length} 首`),
       ),
-      songs.length ? h('div', { class: 'grid' }, songs.map(songCard)) : h('p', { class: 'muted small' }, '還沒點歌'),
+      h('div', { class: 'grid' }, songs.map(songCard)),
     ));
   }
 
   if (!shown) {
-    root.append(h('div', { class: 'empty' }, h('p', {}, '沒有符合條件的歌。')));
-  } else if (!S.songs.length) {
-    root.append(h('div', { class: 'empty' }, h('button', { class: 'btn primary', onclick: () => { switchTab('mine'); openAddDialog(); } }, '＋ 加第一首歌')));
+    root.append(h('div', { class: 'empty' },
+      S.songs.length
+        ? h('p', {}, '沒有符合條件的歌。')
+        : [h('p', {}, '還沒有人點歌。'), h('button', { class: 'btn primary', onclick: () => { switchTab('mine'); openAddDialog(); } }, '＋ 加第一首歌')],
+    ));
   }
 }
 function songCard(s) {
