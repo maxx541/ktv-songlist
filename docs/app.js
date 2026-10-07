@@ -133,7 +133,6 @@ function showView(id) {
   $('#loading').hidden = Boolean(id);
   if (id === 'login-view' && !tachieShown) pickTachie();
   tachieShown = id === 'login-view';
-  document.documentElement.classList.toggle('login-mode', tachieShown); // 登入頁整頁白底
 }
 
 function render() {

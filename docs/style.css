@@ -1,23 +1,23 @@
-/* MakoSing — 固定暗色主題 */
+/* MakoSing — 固定淺色（白底）主題 */
 :root {
-  --bg: #121016;
-  --surface: #1c1922;
-  --surface-2: #26222e;
-  --text: #ece8f3;
-  --muted: #a29bb0;
-  --border: #332e3d;
-  --accent: #b77cf2;
-  --accent-ink: #160d20;
-  --accent-soft: #2d2140;
-  --danger: #ff8080;
-  --warn-bg: #3a2f12;
-  --warn-ink: #f2d07a;
-  --bad-bg: #3f1b1f;
-  --bad-ink: #ff9e9e;
-  --ok-bg: #16301f;
-  --ok-ink: #8fdca4;
+  --bg: #ffffff;
+  --surface: #faf7fe;
+  --surface-2: #f0e9f9;
+  --text: #221d2b;
+  --muted: #6c6479;
+  --border: #e2d9ee;
+  --accent: #8a4fd6;
+  --accent-ink: #ffffff;
+  --accent-soft: #efe5fb;
+  --danger: #c62828;
+  --warn-bg: #fff4d6;
+  --warn-ink: #7a5a00;
+  --bad-bg: #fde4e6;
+  --bad-ink: #b3261e;
+  --ok-bg: #e3f6e8;
+  --ok-ink: #1b6b34;
   --radius: 12px;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -102,7 +102,7 @@ input:not([type]), input[type="text"], input[type="url"], input[type="search"], 
 }
 textarea { resize: vertical; line-height: 1.6; }
 input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
-::placeholder { color: #7d7689; }
+::placeholder { color: #8a8396; }
 .check { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
 .check input { accent-color: var(--accent); }
 .inline-form { display: flex; gap: 8px; }
@@ -110,14 +110,8 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 
 /* 登入 */
 .login-wrap { display: grid; place-items: start center; padding: 24px 0 40px; }
-/* 登入頁：整頁改白底（立繪的白底、髮絲間的白色殘留就不會突兀），登入卡置中，
+/* 登入頁：登入卡置中，
    立繪貼在視窗的左下或右下角（每次隨機，位置由 app.js 設定 data-side）。立繪不加動畫與濾鏡 */
-:root.login-mode {
-  --bg: #fff; --surface: #faf7fe; --surface-2: #f0e9f9; --text: #221d2b; --muted: #6c6479; --border: #e2d9ee;
-  --accent: #8a4fd6; --accent-ink: #fff; --accent-soft: #efe5fb; --danger: #c62828;
-  color-scheme: light;
-}
-html.login-mode { background: #fff; }
 .login-stage { display: flex; justify-content: center; width: 100%; }
 .login-stage .login { position: relative; z-index: 1; }
 .tachie { position: fixed; bottom: 0; z-index: 0; margin: 0; pointer-events: none; user-select: none; }
@@ -201,7 +195,7 @@ dialog.sheet {
 dialog.sheet[open] { display: flex; }
 dialog.sheet.small { width: min(480px, calc(100vw - 32px)); }
 dialog.sheet > form { display: flex; flex-direction: column; min-height: 0; flex: 1; }
-dialog::backdrop { background: rgb(0 0 0 / .6); }
+dialog::backdrop { background: rgb(30 20 45 / .45); }
 .sheet-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
 .sheet-head h2 { font-size: 1.05rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sheet-body { padding: 16px; overflow-y: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
