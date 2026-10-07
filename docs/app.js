@@ -308,7 +308,7 @@ function playlistUrlForm(body) {
       else toast('這不是播放清單網址，請改用「貼上連結」', 'error');
     } catch (err) { toast(err.message, 'error'); }
   } }, input, h('button', { class: 'btn', type: 'submit' }, '載入'));
-  body.append(h('div', { class: 'block' }, h('h3', {}, '用播放清單網址匯入'), form));
+  body.append(h('div', { class: 'block' }, h('h3', {}, '貼上公開播放清單網址'), form));
 }
 
 async function connectYouTube() {
@@ -322,13 +322,13 @@ async function connectYouTube() {
 async function renderYouTubeSource(body) {
   const st = yt.youtubeStatus();
   if (!st.authorized) {
+    if (st.apiKey) playlistUrlForm(body); // 公開清單直接貼網址，不用連結帳號
     body.append(h('div', { class: 'block connect' },
       h('h3', {}, '從你的 YouTube 播放清單挑歌'),
       st.canAuthorize
         ? h('button', { class: 'btn google', onclick: connectYouTube }, '連結 Google／YouTube 帳號')
         : h('p', { class: 'warn small' }, '尚未設定 YouTube 讀取權限，請改用「貼上連結」。'),
     ));
-    if (st.apiKey) playlistUrlForm(body);
     return;
   }
   const listBox = h('div', { class: 'block' }, h('h3', {}, '我的播放清單'), h('p', { class: 'muted' }, '讀取中…'));
